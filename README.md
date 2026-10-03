@@ -140,7 +140,7 @@ Lệnh này đăng ký app vào dự án đó và ghi đè ba file cấu hình �
 ## Phát hành APK mới
 
 ```sh
-# tăng `version` trong pubspec.yaml trước
+# tăng `version` trong pubspec.yaml VÀ `appVersion` ở lib/version.dart (số hiện ở đầu màn hình; test bắt khi lệch)
 flutter build apk --release --target-platform android-arm64
 cp build/app/outputs/flutter-apk/app-release.apk /tmp/bow-notify.apk     # tên file cố định ⇒ link "latest" không đổi
 gh release create v<phiên bản> /tmp/bow-notify.apk --title "Bow Notify <phiên bản>" --notes "<có gì mới>"
