@@ -47,9 +47,10 @@ app.*.map.json
 # fvm
 .fvm/
 
-# Cấu hình Firebase riêng của từng người (`flutterfire configure` sinh ra) — xem README.
-/android/app/google-services.json
-/ios/Runner/GoogleService-Info.plist
-/ios/firebase_app_id_file.json
+# `flutterfire configure` sinh ra nhưng app không dùng (khởi tạo bằng cấu hình native) / file tạm của nó.
+# google-services.json, GoogleService-Info.plist và firebase.json thì ĐƯỢC commit — xem README.
 /lib/firebase_options.dart
-/firebase.json
+/ios/firebase_app_id_file.json
+
+# Bộ đệm build của Kotlin
+/android/.kotlin/

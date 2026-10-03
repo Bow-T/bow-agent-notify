@@ -4,7 +4,6 @@ import 'dart:ui';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pairing.dart';
@@ -20,7 +19,7 @@ Future<void> main() async {
   String? firebaseError;
   try {
     // Không truyền options: đọc cấu hình native do `flutterfire configure` đặt (google-services.json /
-    // GoogleService-Info.plist) — repo không chứa cấu hình Firebase của ai cả.
+    // GoogleService-Info.plist). Android cần cấu hình native để hiện thông báo cả khi app đã tắt hẳn.
     await Firebase.initializeApp();
   } catch (e) {
     firebaseError = '$e';
@@ -66,8 +65,8 @@ class SetupNeededPage extends StatelessWidget {
           Text(t('Chưa có cấu hình Firebase', 'Firebase is not configured'), style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
           Text(t(
-            'Chạy `flutterfire configure` ở gốc repo này với dự án Firebase mà bow đang dùng, rồi build lại app. Xem README.md.',
-            'Run `flutterfire configure` at the root of this repo against the Firebase project bow sends through, then rebuild. See README.md.',
+            'Bản build này thiếu google-services.json / GoogleService-Info.plist. Chạy `flutterfire configure` ở gốc repo rồi build lại — xem README.md.',
+            'This build lacks google-services.json / GoogleService-Info.plist. Run `flutterfire configure` at the repo root and rebuild — see README.md.',
           )),
           const SizedBox(height: 16),
           SelectableText(error, style: Theme.of(context).textTheme.bodySmall),
@@ -199,9 +198,29 @@ class _HomePageState extends State<HomePage> {
     await _pair(raw);
   }
 
-  Future<void> _paste() async {
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    await _pair(data?.text ?? '');
+  /// Nhập mã ghép bằng tay (web bow → "Chép mã"): dùng khi không quét được, vd mở web bow trên chính điện thoại này.
+  /// Ô nhập thường chứ không tự đọc clipboard — iOS hỏi quyền mỗi lần app tự đọc.
+  Future<void> _enterCode() async {
+    final input = TextEditingController();
+    final raw = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t('Dán mã ghép', 'Paste pairing code')),
+        content: TextField(
+          controller: input,
+          autofocus: true,
+          autocorrect: false,
+          enableSuggestions: false,
+          maxLines: 3,
+          decoration: const InputDecoration(hintText: 'bowpush://pair?…'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(t('Thôi', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(context, input.text), child: Text(t('Ghép', 'Pair'))),
+        ],
+      ),
+    );
+    await _pair(raw);
   }
 
   @override
@@ -211,7 +230,7 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('Bow Notify'),
         actions: [
-          IconButton(onPressed: _busy ? null : _paste, tooltip: t('Dán mã ghép', 'Paste pairing code'), icon: const Icon(Icons.content_paste)),
+          IconButton(onPressed: _busy ? null : _enterCode, tooltip: t('Dán mã ghép', 'Paste pairing code'), icon: const Icon(Icons.content_paste)),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

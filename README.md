@@ -6,41 +6,46 @@ dài vừa xong / lỗi. App không gọi về máy chạy bow và không duyệ
 Phía gửi nằm trong repo [bow-agent](https://github.com/Bow-T/bow-agent): `src/core/fcm.ts` + `src/web/pushWatch.ts`
 (Cài đặt → **Thông báo điện thoại** trên web bow).
 
-## Vì sao phải tự build
+## Repo này đã gắn với dự án Firebase `bow-agent-ai`
 
-FCM chỉ gửi được tới app thuộc **cùng dự án Firebase** với khoá service account của bên gửi. Repo này không chứa cấu
-hình Firebase của ai cả, nên mỗi người (hoặc mỗi công ty) tạo một dự án Firebase rồi build app của mình. Làm một lần;
-cả công ty dùng chung một dự án Firebase thì build một bản rồi phát cho mọi người.
+| | |
+| --- | --- |
+| Dự án Firebase | `bow-agent-ai` |
+| Android | `dev.bow.bow_notify` — `android/app/google-services.json` |
+| iOS | `dev.bow.bowNotify` — `ios/Runner/GoogleService-Info.plist` |
 
-Vì thế app nằm ở repo riêng chứ không trong bow-agent: `flutterfire configure` sửa cả file đã track (Gradle,
-`project.pbxproj`) và bạn phải đổi mã định danh app — những thay đổi đó thuộc về bản của bạn.
+Hai file cấu hình trên và `firebase.json` được commit (repo riêng tư, clone về là build được). Chúng chỉ định danh
+app, không phải bí mật. **Khoá service account thì là bí mật** — nó chỉ nằm ở máy chạy bow
+(`~/.bow-agent/push.json`), đừng bao giờ bỏ vào repo này.
 
-## Thiết lập (khoảng 15 phút)
+FCM chỉ gửi được tới app thuộc **cùng dự án Firebase** với khoá service account của bên gửi; vì thế app nằm ở repo
+riêng chứ không trong bow-agent (cấu hình và mã định danh là của từng người / từng công ty).
 
-Cần: Flutter 3.41.4 (`fvm use` đọc `.fvmrc`), [FlutterFire CLI](https://firebase.google.com/docs/flutter/setup)
-(`dart pub global activate flutterfire_cli`), Firebase CLI đã `firebase login`.
+## Còn lại để dùng được
 
-1. **Tạo dự án Firebase** ở [console.firebase.google.com](https://console.firebase.google.com) (gói miễn phí là đủ,
-   không cần bật Analytics).
-2. **Gắn app vào dự án**, chạy ở gốc repo này:
-   ```sh
-   flutterfire configure --platforms=android,ios
-   ```
-   Lệnh này đăng ký app Android + iOS, tải `google-services.json` / `GoogleService-Info.plist` và gắn plugin Google
-   Services vào Gradle. Mã định danh mặc định là `dev.bow.bow_notify` (Android) / `dev.bow.bowNotify` (iOS) — bundle
-   id của iOS là duy nhất toàn Apple nên hãy đổi sang của bạn TRƯỚC bước này (Xcode → Runner → Signing & Capabilities).
-3. **iOS — cho phép gửi qua APNs** (Android bỏ qua bước này):
-   - Apple Developer → Keys → tạo khoá **APNs** (`.p8`) → Firebase Console → Project settings → Cloud Messaging →
-     *APNs Authentication Key* → tải lên.
-   - Mở `ios/Runner.xcworkspace` bằng Xcode → Signing & Capabilities → chọn **Team**. Quyền Push Notifications đã
-     khai sẵn (`ios/Runner/Runner.entitlements`); Xcode tự đăng ký cho App ID khi ký tự động.
-4. **Cài lên điện thoại**: `flutter run --release` (cắm máy), hoặc `flutter build apk` rồi chép file APK sang.
-5. **Nạp khoá cho bow**: Firebase Console → Project settings → Service accounts → *Generate new private key* → trên
-   web bow mở **Cài đặt → Thông báo điện thoại → Thiết lập**, dán nguyên nội dung file JSON.
-6. **Ghép máy**: trong app bấm **Quét mã ghép**, đưa camera vào mã QR ở hộp vừa mở. Không quét được (điện thoại và
-   máy tính là một) thì bấm "Chép mã" trên web rồi bấm nút dán ở góc trên app.
-7. Bấm **Gửi thử** trên web — điện thoại rung là xong. Lần đầu sau khi ghép có thể chậm tới một phút (FCM cần thời
+Cần Flutter 3.41.4 (`fvm use` đọc `.fvmrc`).
+
+1. **Cài lên điện thoại**
+   - Android: `flutter build apk --release` rồi chép `build/app/outputs/flutter-apk/app-release.apk` sang máy, hoặc
+     cắm máy và `flutter run --release`.
+   - iOS: xem mục dưới, rồi `flutter run --release` với máy đã cắm.
+2. **Nạp khoá cho bow**: [Firebase Console → Service accounts](https://console.firebase.google.com/project/bow-agent-ai/settings/serviceaccounts/adminsdk)
+   → *Generate new private key* → trên web bow mở **Cài đặt → Thông báo điện thoại → Thiết lập**, dán nguyên nội dung
+   file JSON vừa tải.
+3. **Ghép máy**: trong app bấm **Quét mã ghép**, đưa camera vào mã QR ở hộp vừa mở. Không quét được thì bấm "Chép
+   mã" trên web rồi bấm nút dán ở góc trên app.
+4. Bấm **Gửi thử** trên web — điện thoại rung là xong. Lần đầu sau khi ghép có thể chậm tới một phút (FCM cần thời
    gian ghi nhận đăng ký topic).
+
+### Riêng iOS
+
+- Apple Developer → Keys → tạo khoá **APNs** (`.p8`) →
+  [Firebase Console → Cloud Messaging](https://console.firebase.google.com/project/bow-agent-ai/settings/cloudmessaging)
+  → *APNs Authentication Key* → tải lên. Thiếu bước này iOS không bao giờ nhận được gì.
+- Mở `ios/Runner.xcworkspace` bằng Xcode → Signing & Capabilities → chọn **Team**. Quyền Push Notifications đã khai
+  sẵn (`ios/Runner/Runner.entitlements`); Xcode tự đăng ký cho App ID khi ký tự động.
+- Bundle id `dev.bow.bowNotify` đã có Team khác đăng ký thì phải đổi: sửa trong Xcode rồi chạy lại
+  `flutterfire configure --project=bow-agent-ai --platforms=android,ios` để đăng ký app iOS mới.
 
 ## Nó hoạt động thế nào
 
@@ -60,8 +65,19 @@ Cần: Flutter 3.41.4 (`fvm use` đọc `.fvmrc`), [FlutterFire CLI](https://fir
 | "Gửi thử" trên web báo lỗi | Dòng lỗi là nguyên văn của Google / FCM: khoá bị thu hồi, sai dự án, API *Firebase Cloud Messaging API (V1)* chưa bật. |
 | Web báo đã gửi, điện thoại im | Vừa ghép xong thì chờ một phút rồi thử lại. Kiểm quyền thông báo của app; Android: kiểm chế độ tiết kiệm pin. |
 | iOS không bao giờ nhận | Chưa tải khoá APNs lên Firebase, hoặc chưa chọn Team (không có quyền Push). Máy ảo iOS chỉ nhận push trên Mac chip Apple. |
-| App báo "mã ghép thuộc dự án khác" | App build bằng `flutterfire configure` của dự án A, còn bow dùng khoá của dự án B. |
-| App mở lên báo "Chưa có cấu hình Firebase" | Chưa chạy bước 2, hoặc chạy xong chưa build lại. |
+| App báo "mã ghép thuộc dự án khác" | Khoá service account dán vào bow không thuộc dự án `bow-agent-ai`. |
+| App mở lên báo "Chưa có cấu hình Firebase" | Thiếu `google-services.json` / `GoogleService-Info.plist` trong bản build. |
+
+## Dùng cho một dự án Firebase khác
+
+Đổi mã định danh app (Android: `applicationId` ở `android/app/build.gradle.kts`; iOS: bundle id trong Xcode), rồi:
+
+```sh
+dart pub global activate flutterfire_cli
+flutterfire configure --project=<dự án của bạn> --platforms=android,ios
+```
+
+Lệnh này đăng ký app vào dự án đó và ghi đè ba file cấu hình ở trên.
 
 ## Phát triển
 
@@ -69,8 +85,3 @@ Cần: Flutter 3.41.4 (`fvm use` đọc `.fvmrc`), [FlutterFire CLI](https://fir
 flutter analyze
 flutter test        # khuôn mã ghép phải khớp pairingUri() ở src/core/fcm.ts của bow-agent
 ```
-
-Các file `flutterfire configure` sinh ra (`google-services.json`, `GoogleService-Info.plist`, `lib/firebase_options.dart`,
-`firebase.json`) nằm trong `.gitignore` để bản mẫu không mang cấu hình của ai. Repo của bạn là riêng tư và cần CI build
-được thì bỏ các dòng đó khỏi `.gitignore` rồi commit chúng (chúng không phải bí mật; **khoá service account thì có** —
-khoá đó chỉ nằm ở máy chạy bow, đừng bao giờ bỏ vào repo này).

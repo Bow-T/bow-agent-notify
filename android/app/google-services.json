@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "433839234713",
+    "project_id": "bow-agent-ai",
+    "storage_bucket": "bow-agent-ai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:433839234713:android:71d406327f3770bf562208",
+        "android_client_info": {
+          "package_name": "dev.bow.bow_notify"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZsqq1MnnJNyTHHfgDSCZExn47QfVOsxs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
