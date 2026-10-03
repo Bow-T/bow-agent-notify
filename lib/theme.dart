@@ -343,51 +343,24 @@ class GlassButton extends StatelessWidget {
   }
 }
 
-/// Dấu hồng tâm của bow (web: `.brand-mark` trong App.tsx) — vòng tròn, chữ thập, chấm giữa.
-class BrandMark extends StatelessWidget {
-  const BrandMark({super.key, required this.size, required this.color});
+/// Icon "kẹo 3D" của web bow (bow-agent, `web/icons3d.ts`), dựng sẵn thành PNG ở `assets/icons/` bằng
+/// `tool/export_icons.mts` + `tool/render_icons.sh`. `logo_mark` = logo của app (robot agent + chuông).
+class Icon3d extends StatelessWidget {
+  const Icon3d(this.name, {super.key, required this.size});
 
+  final String name;
   final double size;
-  final Color color;
 
   @override
-  Widget build(BuildContext context) =>
-      CustomPaint(size: Size.square(size), painter: _BrandMarkPainter(color));
+  Widget build(BuildContext context) => Image.asset(
+    'assets/icons/$name.png',
+    width: size,
+    height: size,
+    filterQuality: FilterQuality.medium,
+  );
 }
 
-class _BrandMarkPainter extends CustomPainter {
-  const _BrandMarkPainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final unit = size.width / 32; // cùng hệ toạ độ 32×32 với SVG của web
-    final center = size.center(Offset.zero);
-    final stroke = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawCircle(center, 10.5 * unit, stroke..strokeWidth = 1.6 * unit);
-    stroke.strokeWidth = unit;
-    canvas.drawLine(
-      Offset(center.dx, 3.5 * unit),
-      Offset(center.dx, 28.5 * unit),
-      stroke,
-    );
-    canvas.drawLine(
-      Offset(3.5 * unit, center.dy),
-      Offset(28.5 * unit, center.dy),
-      stroke,
-    );
-    canvas.drawCircle(center, 2.6 * unit, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(_BrandMarkPainter old) => old.color != color;
-}
-
-/// Dấu hồng tâm trong đĩa kính, có vòng sóng toả ra khi đang nghe — "agent còn sống và đang nối với máy này".
+/// Logo của app trong đĩa kính, có vòng sóng toả ra khi đang nghe — "agent còn sống và đang nối với máy này".
 class ListeningMark extends StatefulWidget {
   const ListeningMark({super.key, required this.active});
 
@@ -477,7 +450,10 @@ class _ListeningMarkState extends State<ListeningMark>
               ],
             ),
             alignment: Alignment.center,
-            child: BrandMark(size: 34, color: color),
+            child: Opacity(
+              opacity: widget.active ? 1 : 0.55,
+              child: const Icon3d('logo_mark', size: 46),
+            ),
           ),
         ],
       ),

@@ -55,7 +55,7 @@ class _ScanPageState extends State<ScanPage> {
             body: Stack(
               children: [
                 Positioned.fill(child: MobileScanner(onDetect: _onDetect)),
-                // Khung ngắm: bốn góc bo + dấu hồng tâm của bow ở giữa.
+                // Khung ngắm.
                 Center(
                   child: Container(
                     width: 250,
@@ -67,11 +67,6 @@ class _ScanPageState extends State<ScanPage> {
                         width: 2,
                       ),
                     ),
-                    alignment: Alignment.center,
-                    child: BrandMark(
-                      size: 40,
-                      color: Colors.white.withValues(alpha: 0.5),
-                    ),
                   ),
                 ),
                 Align(
@@ -81,7 +76,7 @@ class _ScanPageState extends State<ScanPage> {
                     child: Glass(
                       child: Row(
                         children: [
-                          Icon(Icons.qr_code_scanner_rounded, color: c.accent),
+                          const Icon3d('camera', size: 30),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
