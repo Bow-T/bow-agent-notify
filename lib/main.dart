@@ -426,9 +426,28 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ),
       );
     }
-    if (_pairings.any((p) => p.topic == pairing.topic)) {
+    final existing = _pairings.indexWhere((p) => p.topic == pairing.topic);
+    if (existing >= 0) {
+      if (_pairings[existing].uri == pairing.uri) {
+        return _say(
+          t('Máy này đã ghép rồi.', 'Already paired with this machine.'),
+        );
+      }
+      // Cùng máy nhưng mã MỚI — web vừa bật / tắt "duyệt từ điện thoại" (mã có thêm / mất khoá) hay đổi tên máy:
+      // thay bản đã lưu. Topic không đổi nên khỏi đăng ký lại; không làm thế thì phải bỏ ghép rồi quét lại mới có khoá.
+      setState(() => _pairings = [..._pairings]..[existing] = pairing);
+      await _save();
+      _watchPending();
       return _say(
-        t('Máy này đã ghép rồi.', 'Already paired with this machine.'),
+        pairing.canApprove
+            ? t(
+                'Đã cập nhật ${pairing.host}: giờ duyệt được từ điện thoại này.',
+                'Updated ${pairing.host}: you can now approve from this phone.',
+              )
+            : t(
+                'Đã cập nhật ${pairing.host}: chỉ nhận thông báo.',
+                'Updated ${pairing.host}: notifications only.',
+              ),
       );
     }
     setState(() => _busy = true);
