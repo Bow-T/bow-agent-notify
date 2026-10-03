@@ -27,6 +27,11 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Nút Cho phép / Từ chối trên thông báo: gói flutter_local_notifications nhận cú bấm qua receiver này rồi gọi
+             về Dart (notifications.dart) — kể cả khi app đã tắt. -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
+            android:exported="false" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

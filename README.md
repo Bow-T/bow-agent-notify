@@ -1,7 +1,8 @@
 # Bow Notify — app đồng hành nhận thông báo của bow-agent
 
-App Flutter nhỏ, **chỉ nhận** thông báo đẩy (FCM) mà bow gửi khi agent chờ bạn duyệt, đang hỏi, hoặc một lượt chạy
-dài vừa xong / lỗi. App không gọi về máy chạy bow và không duyệt từ xa — thấy thông báo thì về máy mà bấm.
+App Flutter nhỏ nhận thông báo đẩy (FCM) mà bow gửi khi agent chờ bạn duyệt, đang hỏi, hoặc một lượt chạy dài vừa
+xong / lỗi. Mặc định app chỉ báo; bật thêm *Duyệt từ điện thoại* thì duyệt được ngay trong app hoặc ngay trên thông báo
+(xem dưới). App không bao giờ gọi về máy chạy bow.
 
 Phía gửi nằm trong repo [bow-agent](https://github.com/Bow-T/bow-agent): `src/core/fcm.ts` + `src/web/pushWatch.ts`
 (Cài đặt → **Thông báo điện thoại** trên web bow).
@@ -72,6 +73,23 @@ từ đây", và khi agent chờ bạn, mục **Chờ bạn duyệt** hiện ở
 - Thẻ câu hỏi: chọn đáp án rồi **Gửi**, hoặc **Bỏ qua**.
 - Thẻ sửa file chỉ hiện đường dẫn + số dòng thay đổi — muốn soi nội dung thì về máy.
 
+### Duyệt ngay trên thông báo (Android)
+
+Không cần mở app: thông báo hiện luôn lệnh cần duyệt kèm nút (`lib/notifications.dart`).
+
+- Thẻ duyệt thường: **Cho phép** / **Từ chối**. Thẻ rủi ro: **Mở để duyệt** / **Từ chối** — không có nút Cho phép,
+  vì cho phép thao tác rủi ro phải qua vân tay, mà vân tay cần mở app.
+- Câu hỏi gọn (một câu, chọn một, tối đa ba lựa chọn — Android chỉ hiện ba nút): mỗi lựa chọn một nút. Câu hỏi khác:
+  **Mở để trả lời**.
+- Màn hình khoá không hiện lệnh, không hiện nút — mở khoá rồi mới thấy.
+- Cách làm: thông báo đẩy mang mã thẻ (chỉ mã, không nội dung). App tra đúng thẻ đó trên Realtime Database, giải mã
+  bằng khoá ghép máy, rồi thay thông báo hệ điều hành vừa hiện bằng bản có nút. Bấm nút thì app đọc lại thẻ (không tin
+  thứ nằm trong thông báo) rồi mới gửi quyết định — kể cả khi app đã tắt.
+- Thẻ đã được xử lý ở nơi khác (trong app, trên web): thông báo của nó tự gỡ khi app đang mở; app đang tắt thì thông báo
+  nằm lại, bấm nút sẽ nhận câu "thẻ không còn chờ".
+- Máy không cho app chạy nền (tiết kiệm pin gắt) thì vẫn có thông báo thường như trước, bấm vào là mở app.
+- Cần bow-agent bản có gửi mã thẻ; bản cũ hơn thì thông báo như trước, không có nút. iOS chưa có nút trên thông báo.
+
 Nó hoạt động thế nào (`lib/remote.dart`, nửa server ở `src/core/remoteApproval.ts` của bow-agent):
 
 - Máy chạy bow ghi thẻ lên Realtime Database, app đọc (mỗi 4 giây khi app đang mở, và ngay khi có thông báo tới);
@@ -123,6 +141,7 @@ Nó hoạt động thế nào (`lib/remote.dart`, nửa server ở `src/core/rem
 | iOS không bao giờ nhận | Chưa tải khoá APNs lên Firebase, hoặc chưa chọn Team (không có quyền Push). Máy ảo iOS chỉ nhận push trên Mac chip Apple. |
 | App báo "mã ghép thuộc dự án khác" | Khoá service account dán vào bow không thuộc dự án `bow-agent-ai`. |
 | Thẻ không hiện ở "Chờ bạn duyệt" | Máy đó chưa bật *Duyệt từ điện thoại* (dòng máy đã ghép không ghi "duyệt được từ đây") → bật trên web rồi quét lại mã. Thẻ chỉ lên sau khi treo 1,5 giây. |
+| Thông báo không có nút duyệt | Cần app từ 1.4 + bow-agent bản gửi mã thẻ + máy đã ghép ghi "duyệt được từ đây". Máy chặn app chạy nền (tiết kiệm pin) thì chỉ có thông báo thường — cho app vào danh sách không tối ưu pin. |
 | Bấm Cho phép báo "Không gửi được" | Thẻ đã có trả lời (mỗi thẻ ghi một lần), hoặc bow không còn chạy / trang bow đã đóng. |
 | App mở lên báo "Chưa có cấu hình Firebase" | Thiếu `google-services.json` / `GoogleService-Info.plist` trong bản build. |
 

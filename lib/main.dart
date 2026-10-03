@@ -3,15 +3,15 @@ import 'dart:ui';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import 'notifications.dart';
 import 'pairing.dart';
 import 'remote.dart';
 import 'scan_page.dart';
+import 'store.dart';
 import 'theme.dart';
 import 'version.dart';
 
@@ -19,7 +19,7 @@ import 'version.dart';
 /// từ xa. Ghép máy = quét mã QR ở web bow (Cài đặt → Thông báo điện thoại) rồi đăng ký topic trong mã.
 ///
 /// App chạy nền / đã tắt: hệ điều hành tự hiện thông báo (FCM gửi kèm khối `notification`). App đang mở: iOS vẫn
-/// hiện + kêu; Android thì không — app tự dựng thông báo qua kênh native `bow/notify` (MainActivity.kt).
+/// hiện + kêu; Android thì không — app tự dựng thông báo (notifications.dart), kèm nút duyệt khi đó là một thẻ.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   String? firebaseError;
@@ -27,6 +27,9 @@ Future<void> main() async {
     // Không truyền options: đọc cấu hình native do `flutterfire configure` đặt (google-services.json /
     // GoogleService-Info.plist). Android cần cấu hình native để hiện thông báo cả khi app đã tắt hẳn.
     await Firebase.initializeApp();
+    // Thông báo tới lúc app đang nền / đã tắt: nâng nó thành bản có nút duyệt (notifications.dart).
+    FirebaseMessaging.onBackgroundMessage(pushInBackground);
+    await initNotifications();
   } catch (e) {
     firebaseError = '$e';
   }
@@ -36,9 +39,6 @@ Future<void> main() async {
 /// Giao diện theo ngôn ngữ máy: tiếng Việt khi máy đặt tiếng Việt, còn lại tiếng Anh.
 String t(String vi, String en) =>
     PlatformDispatcher.instance.locale.languageCode == 'vi' ? vi : en;
-
-const _prefsKey = 'pairings';
-const _native = MethodChannel('bow/notify');
 
 /// Một thông báo đã tới lúc app đang mở.
 typedef Received = ({String kind, String title, String body, DateTime at});
@@ -225,12 +225,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    notificationOpened.addListener(_onNotificationOpened);
     unawaited(_start());
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    notificationOpened.removeListener(_onNotificationOpened);
     _pendingTimer?.cancel();
     _openedSub?.cancel();
     _sub?.cancel();
@@ -238,11 +240,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _start() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = (prefs.getStringList(_prefsKey) ?? [])
-        .map(Pairing.parse)
-        .nonNulls
-        .toList();
+    final saved = await loadPairings();
     final settings = await _messaging.requestPermission();
     // iOS: cho thông báo hiện + kêu cả khi app đang mở. Android không có lựa chọn này — xem `_onMessage`.
     await _messaging.setForegroundNotificationPresentationOptions(
@@ -275,6 +273,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
+  /// Bấm vào một thông báo (hoặc vừa duyệt bằng nút trên thông báo): đọc lại thẻ chờ ngay.
+  void _onNotificationOpened() => unawaited(_refreshPending());
+
   /// Đọc thẻ chờ ngay, rồi hỏi lại mỗi 4 giây chừng nào app còn ở trước mặt và có máy cho duyệt.
   void _watchPending() {
     _pendingTimer?.cancel();
@@ -289,10 +290,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> _refreshPending() async {
     final sources = _pairings.where((p) => p.canApprove).toList();
+    final asOf = DateTime.now();
+    var complete = true;
     // Một máy không đọc được (mất mạng) không được làm mất thẻ của máy khác.
     final results = await Future.wait(
       sources.map(
-        (p) => fetchPending(p).catchError((Object _) => <PendingCard>[]),
+        (p) => fetchPending(p).catchError((Object _) {
+          complete = false;
+          return <PendingCard>[];
+        }),
       ),
     );
     if (!mounted) return;
@@ -311,6 +317,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           cards.length,
         ).every((i) => cards[i].id == _pending[i].id)) {
       setState(() => _pending = cards);
+    }
+    // Thẻ đã xử lý (vừa bấm trong app, hoặc ở web) thì gỡ luôn thông báo có nút của nó. Chỉ khi đọc được MỌI máy —
+    // đọc hụt một máy mà gỡ là mất thông báo của thẻ còn đang chờ.
+    if (complete) {
+      unawaited(dismissHandledCards({for (final card in cards) card.id}, asOf));
     }
   }
 
@@ -361,6 +372,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         setState(
           () => _pending = _pending.where((c) => c.id != card.id).toList(),
         );
+        unawaited(
+          _refreshPending(),
+        ); // gỡ luôn thông báo có nút của thẻ vừa trả lời
       }
     } catch (e) {
       _say(
@@ -380,18 +394,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final note = message.notification;
     if (note == null) return;
     unawaited(_refreshPending());
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      unawaited(
-        _native
-            .invokeMethod<void>('show', {
-              'title': note.title,
-              'body': note.body,
-              'channel': note.android?.channelId,
-              'tag': note.android?.tag ?? message.messageId,
-            })
-            .catchError((Object _) {}),
-      );
-    }
+    // Android không tự hiện gì khi app đang mở: tự dựng thông báo (có nút duyệt nếu là một thẻ).
+    unawaited(handlePush(message, foreground: true));
     if (!mounted) return;
     setState(
       () => _recent.insert(0, (
@@ -403,10 +407,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_prefsKey, _pairings.map((p) => p.uri).toList());
-  }
+  Future<void> _save() => savePairings(_pairings);
 
   void _say(String text) {
     if (!mounted) return;
