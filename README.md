@@ -26,8 +26,11 @@ riêng chứ không trong bow-agent (cấu hình và mã định danh là của 
 Cần Flutter 3.41.4 (`fvm use` đọc `.fvmrc`).
 
 1. **Cài lên điện thoại**
-   - Android: `flutter build apk --release` rồi chép `build/app/outputs/flutter-apk/app-release.apk` sang máy, hoặc
-     cắm máy và `flutter run --release`.
+   - Android: tải APK mới nhất —
+     <https://github.com/Bow-T/bow-agent-notify/releases/latest/download/bow-notify.apk> — rồi mở file để cài (cho phép
+     "cài từ nguồn không xác định" khi được hỏi). Repo riêng tư nên trình duyệt trên điện thoại phải đăng nhập tài khoản
+     GitHub có quyền vào repo; chưa đăng nhập thì link báo 404. Web bow có sẵn nút **Tải APK** / **Chép link tải** trong
+     hộp Thông báo điện thoại.
    - iOS: xem mục dưới, rồi `flutter run --release` với máy đã cắm.
 2. **Nạp khoá cho bow**: [Firebase Console → Service accounts](https://console.firebase.google.com/project/bow-agent-ai/settings/serviceaccounts/adminsdk)
    → *Generate new private key* → trên web bow mở **Cài đặt → Thông báo điện thoại → Thiết lập**, dán nguyên nội dung
@@ -78,6 +81,19 @@ flutterfire configure --project=<dự án của bạn> --platforms=android,ios
 ```
 
 Lệnh này đăng ký app vào dự án đó và ghi đè ba file cấu hình ở trên.
+
+## Phát hành APK mới
+
+```sh
+# tăng `version` trong pubspec.yaml trước
+flutter build apk --release --target-platform android-arm64
+cp build/app/outputs/flutter-apk/app-release.apk /tmp/bow-notify.apk     # tên file cố định ⇒ link "latest" không đổi
+gh release create v<phiên bản> /tmp/bow-notify.apk --title "Bow Notify <phiên bản>" --notes "<có gì mới>"
+```
+
+Bản phát hành đang ký bằng khoá debug của máy build (`android/app/build.gradle.kts`). Cài lần đầu không sao; nhưng bản
+build từ MÁY KHÁC có chữ ký khác nên không cài đè được — phải gỡ app cũ rồi cài lại (mất danh sách máy đã ghép, quét lại
+mã là xong). Muốn cập nhật êm giữa nhiều máy build / CI thì tạo một keystore phát hành riêng.
 
 ## Phát triển
 
