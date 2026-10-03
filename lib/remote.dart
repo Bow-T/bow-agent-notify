@@ -184,6 +184,31 @@ Future<List<PendingCard>> fetchPending(Pairing pairing) async {
   return cards..sort((a, b) => a.at.compareTo(b.at));
 }
 
+/// Mã thẻ / nhánh tới từ thông báo đẩy — chỉ nhận đúng khuôn này trước khi ghép vào đường dẫn.
+final _safeKey = RegExp(r'^[A-Za-z0-9_-]{1,128}$');
+
+/// MỘT thẻ theo mã (thông báo đẩy mang mã thẻ + nhánh). `null` = thẻ không còn chờ, hoặc không mở được bằng khoá.
+/// Ném lỗi khi mã sai khuôn / database không trả lời — khác hẳn "thẻ đã hết".
+Future<PendingCard?> fetchCard(Pairing pairing, String port, String id) async {
+  if (!pairing.canApprove) return null;
+  if (!_safeKey.hasMatch(port) || !_safeKey.hasMatch(id)) {
+    throw const FormatException('mã thẻ sai khuôn');
+  }
+  final (status, body) = await _call(
+    'GET',
+    Uri.https(pairing.dbHost!, '/bow/${pairing.topic}/pending/$port/$id.json'),
+  );
+  if (status != 200) throw HttpException('HTTP $status');
+  final blob = jsonDecode(body);
+  if (blob is! String) return null;
+  return PendingCard.fromJson(
+    pairing,
+    port,
+    id,
+    await openCard(pairing, id, blob),
+  );
+}
+
 /// Gửi quyết định cho [card]: `{allow: bool}` hoặc `{answers: {...} | null}`. Ném lỗi khi server cơ sở dữ liệu từ
 /// chối — thường là thẻ này đã có trả lời (mỗi thẻ chỉ ghi được MỘT lần).
 Future<void> sendReply(PendingCard card, Map<String, Object?> reply) async {
