@@ -13,6 +13,7 @@ import 'pairing.dart';
 import 'remote.dart';
 import 'scan_page.dart';
 import 'theme.dart';
+import 'version.dart';
 
 /// Bow Notify — app đồng hành của bow-agent: CHỈ nhận thông báo đẩy (FCM). Không gọi về máy chạy bow, không duyệt
 /// từ xa. Ghép máy = quét mã QR ở web bow (Cài đặt → Thông báo điện thoại) rồi đăng ký topic trong mã.
@@ -118,6 +119,12 @@ class BowScaffold extends StatelessWidget {
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
                         ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Số phiên bản: biết máy đang cài bản nào mà không phải vào Cài đặt của điện thoại.
+                      Text(
+                        'v$appVersion',
+                        style: TextStyle(color: c.muted, fontSize: 12),
                       ),
                       const Spacer(),
                       ?action,
