@@ -111,6 +111,52 @@ void main() {
   );
 
   test(
+    'lời mời trả lời: mỗi câu một nút (tối đa ba), gửi lại ĐÚNG câu đã mời',
+    () {
+      final card = _card({
+        'kind': 'reply',
+        'options': ['push', 'tiếp', 'commit/push', 'kiểm tra'],
+      });
+      expect(cardActions(card).map((a) => (a.id, a.title, a.opensApp)), [
+        ('say:0', 'push', false),
+        ('say:1', 'tiếp', false),
+        ('say:2', 'commit/push', false),
+      ]);
+      expect(replyForAction(card, 'say:2'), {'say': 'commit/push'});
+      expect(replyForAction(card, 'say:3'), {'say': 'kiểm tra'});
+      for (final bad in [
+        'say:4',
+        'say:-1',
+        'say:x',
+        'allow',
+        'deny',
+        'opt:0',
+      ]) {
+        expect(replyForAction(card, bad), isNull, reason: bad);
+      }
+    },
+  );
+
+  test(
+    'thẻ `reply` không có câu nào thì không phải thẻ; thẻ duyệt không nhận nút của lời mời',
+    () {
+      expect(
+        PendingCard.fromJson(_pairing, '4000', 'c1', {
+          'id': 'c1',
+          'kind': 'reply',
+          'label': 'x',
+          'text': 'Xong.',
+          'at': 1,
+          'options': <String>[],
+        }),
+        isNull,
+      );
+      final approval = _card({'kind': 'approval', 'risky': false});
+      expect(replyForAction(approval, 'say:0'), isNull);
+    },
+  );
+
+  test(
     'câu hỏi gọn (một câu, chọn một, tối đa ba lựa chọn): mỗi lựa chọn một nút',
     () {
       final card = _card(_question(options: 3));

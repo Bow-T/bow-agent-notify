@@ -72,6 +72,9 @@ từ đây", và khi agent chờ bạn, mục **Chờ bạn duyệt** hiện ở
   vân tay / Face ID / mật mã máy trước khi gửi. Máy chưa đặt khoá màn hình thì hỏi lại bằng một hộp xác nhận.
 - Thẻ câu hỏi: chọn đáp án rồi **Gửi**, hoặc **Bỏ qua**.
 - Thẻ sửa file chỉ hiện đường dẫn + số dòng thay đổi — muốn soi nội dung thì về máy.
+- Thẻ **trả lời** (dấu tích xanh): lượt đã xong và bow mời vài câu gõ tiếp — "push", "tiếp", "commit/push", hoặc câu agent
+  mời. Bấm một câu là tab trên máy gửi đúng câu đó, lượt mới chạy tiếp. Chỉ chọn được câu đang mời, không gõ tự do; không
+  chọn gì thì lượt cứ nằm đó như khi bạn rời bàn. Trang bow trên máy phải còn mở.
 
 ### Duyệt ngay trên thông báo (Android)
 
@@ -81,6 +84,7 @@ Không cần mở app: thông báo hiện luôn lệnh cần duyệt kèm nút (
   vì cho phép thao tác rủi ro phải qua vân tay, mà vân tay cần mở app.
 - Câu hỏi gọn (một câu, chọn một, tối đa ba lựa chọn — Android chỉ hiện ba nút): mỗi lựa chọn một nút. Câu hỏi khác:
   **Mở để trả lời**.
+- Thông báo "đã xong" có lời mời trả lời: mỗi câu một nút (ba câu đầu), kèm đoạn cuối lời agent để biết đang trả lời gì.
 - Màn hình khoá không hiện lệnh, không hiện nút — mở khoá rồi mới thấy.
 - Cách làm: thông báo đẩy mang mã thẻ (chỉ mã, không nội dung). App tra đúng thẻ đó trên Realtime Database, giải mã
   bằng khoá ghép máy, rồi thay thông báo hệ điều hành vừa hiện bằng bản có nút. Bấm nút thì app đọc lại thẻ (không tin
@@ -142,6 +146,7 @@ Nó hoạt động thế nào (`lib/remote.dart`, nửa server ở `src/core/rem
 | App báo "mã ghép thuộc dự án khác" | Khoá service account dán vào bow không thuộc dự án `bow-agent-ai`. |
 | Thẻ không hiện ở "Chờ bạn duyệt" | Máy đó chưa bật *Duyệt từ điện thoại* (dòng máy đã ghép không ghi "duyệt được từ đây") → bật trên web rồi quét lại mã. Thẻ chỉ lên sau khi treo 1,5 giây. |
 | Thông báo không có nút duyệt | Cần app từ 1.4 + bow-agent bản gửi mã thẻ + máy đã ghép ghi "duyệt được từ đây". Máy chặn app chạy nền (tiết kiệm pin) thì chỉ có thông báo thường — cho app vào danh sách không tối ưu pin. |
+| Thông báo "đã xong" không có nút trả lời | Cần app từ 1.5 + bow-agent bản có lời mời trả lời. Lượt ngắn hơn 60 giây không báo (trừ khi bạn vừa thao tác từ điện thoại); ô nhập trên máy đang có bản nháp thì không mời; trang bow đã đóng thì không ai gửi được câu trả lời. |
 | Bấm Cho phép báo "Không gửi được" | Thẻ đã có trả lời (mỗi thẻ ghi một lần), hoặc bow không còn chạy / trang bow đã đóng. |
 | App mở lên báo "Chưa có cấu hình Firebase" | Thiếu `google-services.json` / `GoogleService-Info.plist` trong bản build. |
 

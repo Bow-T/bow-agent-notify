@@ -19,6 +19,9 @@ import 'store.dart';
 /// bản có nút là phần NÂNG CẤP khi app chạy được. App không chạy nền được thì vẫn còn thông báo thường, bấm vào là mở app.
 ///
 /// Thao tác RỦI RO không có nút "Cho phép" trên thông báo: nó phải qua vân tay, mà vân tay cần mở app.
+///
+/// Thông báo "đã xong" cũng có nút khi bow mời vài câu trả lời nhanh ("push", "tiếp", "commit/push" — thẻ `reply`):
+/// bấm một câu là tab trên máy gửi đúng câu đó, lượt mới chạy tiếp mà không cần về máy.
 /// iOS chưa có nút trên thông báo (cần một phần mở rộng native để giải mã nội dung) — mọi thứ ở đây chỉ chạy trên Android.
 
 final _plugin = FlutterLocalNotificationsPlugin();
@@ -140,8 +143,18 @@ Question? _quickQuestion(PendingCard card) {
       : null;
 }
 
+/// Android hiện tối đa ba nút trên một thông báo.
+const _maxActions = 3;
+
 /// Các nút của một thẻ.
 List<CardAction> cardActions(PendingCard card) {
+  if (card.kind == 'reply') {
+    // Lời mời trả lời: mỗi câu một nút (ba câu đầu — câu agent mời đứng trước "tiếp" / "commit/push").
+    return [
+      for (final (i, option) in card.options.take(_maxActions).indexed)
+        (id: 'say:$i', title: option, opensApp: false),
+    ];
+  }
   if (card.kind == 'approval') {
     return [
       card.risky
@@ -173,6 +186,13 @@ List<CardAction> cardActions(PendingCard card) {
 /// Quyết định ứng với nút [actionId] của [card]; `null` = nút này không được gửi gì (kể cả khi mã nút bị giả):
 /// thẻ rủi ro KHÔNG BAO GIỜ được "cho phép" từ thông báo.
 Map<String, Object?>? replyForAction(PendingCard card, String actionId) {
+  if (card.kind == 'reply') {
+    final index = actionId.startsWith('say:')
+        ? int.tryParse(actionId.substring(4))
+        : null;
+    if (index == null || index < 0 || index >= card.options.length) return null;
+    return {'say': card.options[index]};
+  }
   if (card.kind == 'approval') {
     if (actionId == 'deny') return {'allow': false};
     if (actionId == 'allow' && !card.risky) return {'allow': true};
@@ -230,7 +250,8 @@ Future<void> _showCard(
     body: card.text,
     notificationDetails: NotificationDetails(
       android: _details(
-        'bow_ask',
+        // Lời mời trả lời đi cùng thông báo "đã xong" — giữ kênh (và âm) của nó.
+        card.kind == 'reply' ? 'bow_done' : 'bow_ask',
         tag: tag,
         bigText: card.text,
         subText: [
@@ -267,7 +288,8 @@ Future<void> handlePush(
   if (!_android) return;
   final note = message.notification;
   final tag = message.data['tag'] as String? ?? note?.android?.tag;
-  final id = message.data['id'];
+  // `id` = thẻ chờ duyệt / câu hỏi; `rid` = lời mời trả lời đi kèm thông báo "đã xong".
+  final id = message.data['id'] ?? message.data['rid'];
   final port = message.data['port'];
   if (tag == null) return;
   if (id is String && port is String) {
@@ -282,7 +304,10 @@ Future<void> handlePush(
       }
       // Biết chắc máy gửi + có khoá của nó mà thẻ không còn ⇒ đã được xử lý trước khi thông báo tới: gỡ bản thường đang
       // nằm trong khay (app đang mở thì chưa hiện gì). Không chắc (không có khoá, không rõ máy gửi) thì để nguyên.
-      if (topic != null && approvers.isNotEmpty) {
+      // Lời mời trả lời đã rút thì KHÔNG gỡ: "lượt đã xong" vẫn là tin đúng, chỉ là không còn nút.
+      if (topic != null &&
+          approvers.isNotEmpty &&
+          message.data['id'] is String) {
         if (!foreground) await _plugin.cancel(id: 0, tag: tag);
         return _remember(tag, null);
       }
