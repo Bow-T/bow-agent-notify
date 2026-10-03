@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Lớp một màu của icon thích ứng (Android 13+ "icon theo màu chủ đề"): robot agent, thu vào vùng an toàn ở giữa. -->
+<!-- Lớp một màu của icon thích ứng (Android 13+ "icon theo màu chủ đề"): quả cầu agent, thu vào vùng an toàn ở giữa. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <group android:scaleX="2.5" android:scaleY="2.5" android:translateX="24" android:translateY="25">
-        <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M8.8,6.6h6.4a4.6,4.6 0,0 1,4.6 4.6v3.8a4.6,4.6 0,0 1,-4.6 4.6h-6.4a4.6,4.6 0,0 1,-4.6 -4.6v-3.8a4.6,4.6 0,0 1,4.6 -4.6z M9.2,13m-1.7,0a1.7,1.7 0,1 0,3.4 0a1.7,1.7 0,1 0,-3.4 0 M14.8,13m-1.7,0a1.7,1.7 0,1 0,3.4 0a1.7,1.7 0,1 0,-3.4 0" />
-        <path android:fillColor="#FFFFFF" android:pathData="M12,3.1m-1.7,0a1.7,1.7 0,1 0,3.4 0a1.7,1.7 0,1 0,-3.4 0 M11.3,4.4h1.4v2.6h-1.4z" />
-        <path android:fillColor="#FFFFFF" android:pathData="M2,11.4a1,1 0,0 1,1 -1h0.6v5.2h-0.6a1,1 0,0 1,-1 -1z M22,11.4a1,1 0,0 0,-1 -1h-0.6v5.2h0.6a1,1 0,0 0,1 -1z" />
+    <group android:scaleX="2.6" android:scaleY="2.6" android:translateX="22.8" android:translateY="22.8">
+        <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M12,3.4a8.6,8.6 0,1 0,0 17.2a8.6,8.6 0,1 0,0 -17.2z M8.7,12.6m-1.9,0a1.9,1.9 0,1 0,3.8 0a1.9,1.9 0,1 0,-3.8 0 M15.3,12.6m-1.9,0a1.9,1.9 0,1 0,3.8 0a1.9,1.9 0,1 0,-3.8 0" />
     </group>
 </vector>

@@ -45,29 +45,38 @@ for (const name of NAMES) {
 }
 
 /*
- * LOGO của app = robot agent + chuông thông báo, ghép từ chính hai hình trên (khung 64×64): robot ở dưới-trái,
- * chuông nghiêng ở trên-phải, mép chuông chạm góc đầu robot.
- *  - logo_mark.svg: chỉ hình (nền trong suốt) — dùng trong app và làm lớp trước của icon thích ứng Android;
- *  - logo_adaptive.svg: cùng hình, thu vào vùng an toàn 66/108 của icon thích ứng Android (nền do Android vẽ);
- *  - logo.svg: hình trên nền Cực quang của theme kính, kèm hai vạch "đang reo" — icon app của iOS.
+ * LOGO của app = "quả cầu agent": một quả cầu chàm bóng mang kính che + hai mắt xanh của agent, chuông thông báo tựa
+ * ở góc trên-phải. Quả cầu vẽ ở đây (chỉ app dùng) bằng đúng cách dựng "bi" của bộ icon — bản sao sẫm lệch xuống làm
+ * bề dày + thân đổ màu toả tròn `bic-r-indigo` — còn chuông lấy nguyên từ bộ icon. Khung gốc 32×32 của bộ icon; chuông
+ * nhô ra ngoài khung nên các file dưới tự khai khung nhìn.
+ *  - logo_mark.svg: chỉ hình (nền trong suốt) — dấu thương hiệu trong app;
+ *  - logo_adaptive.svg: cùng hình, thu vào vùng an toàn (đường tròn 66/108) của icon thích ứng Android — nền do
+ *    Android vẽ (res/drawable/ic_launcher_background.xml);
+ *  - logo.svg: hình trên nền sáng — icon app của iOS.
  */
-const mark = `<g transform="translate(3 14) scale(1.55)">${artOf('agent')}</g><g transform="translate(34.5 1.5) scale(.9) rotate(16 16 16)">${artOf('bell')}</g>`;
+const INDIGO_LIP = '#3C47CF'; // PAL.indigo[2] của icons3d.ts
+const eye = (cx: number): string => `<circle cx="${cx}" cy="17.62" r="2.06" fill="#7DF3FF"/><circle cx="${cx - 0.62}" cy="16.92" r=".7" fill="#fff"/>`;
+const orb =
+  `<circle cx="15" cy="19.1" r="11.8" fill="${INDIGO_LIP}"/><circle cx="15" cy="17.4" r="11.8" fill="url(#bic-r-indigo)"/>`
+  + `<rect x="7" y="13.2" width="16" height="9.6" rx="4.42" fill="#1B1F5E"/>` + eye(10.52) + eye(19.48)
+  + `<path d="M13.4 20.69 q1.6 .96 3.2 0" fill="none" stroke="#7DF3FF" stroke-width=".96" stroke-linecap="round"/>`
+  + `<ellipse cx="9.6" cy="9.8" rx="2.8" ry="1.3" fill="#fff" opacity=".6" transform="rotate(-38 9.6 9.8)"/>`;
+const mark = `${orb}<g transform="translate(17.6 -3.6) scale(.5) rotate(16 16 16)">${artOf('bell')}</g>`;
 const markDefs = defsFor(mark);
-save('logo_mark.svg', `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs>${markDefs}${shadow('shadow', 1.2, 1, 0.3)}</defs><g filter="url(#shadow)">${mark}</g></svg>`);
+// Hình chiếm x 3…34,5 và y −3,5…31 ⇒ khung vuông 37 đơn vị quanh tâm (18,75; 13,75).
+save('logo_mark.svg', `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0.25 -4.75 37 37"><defs>${markDefs}${shadow('shadow', 0.8, 0.7, 0.3)}</defs><g filter="url(#shadow)">${mark}</g></svg>`);
+// Điểm xa tâm nhất (đỉnh chuông) cách ~20,6 đơn vị; bán kính vùng an toàn là 33 ⇒ phóng 1,55 là còn dư lề.
+save('logo_adaptive.svg', `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108"><defs>${markDefs}${shadow('shadow', 0.8, 0.8, 0.3)}</defs><g transform="translate(24.94 32.69) scale(1.55)" filter="url(#shadow)">${mark}</g></svg>`);
 
-save('logo_adaptive.svg', `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108"><defs>${markDefs}${shadow('shadow', 1.2, 1.1, 0.45)}</defs><g transform="translate(22 22)" filter="url(#shadow)">${mark}</g></svg>`);
-
-const blob = (id: string, cx: string, cy: string, r: string, color: string, opacity: number): string =>
-  `<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="${r}"><stop offset="0" stop-color="${color}" stop-opacity="${opacity}"/><stop offset=".7" stop-color="${color}" stop-opacity="0"/></radialGradient>`;
-const aurora = blob('aur-a', '6%', '0%', '78%', '#6260e8', 0.95) + blob('aur-b', '96%', '2%', '72%', '#0a84ff', 0.92) + blob('aur-c', '88%', '100%', '78%', '#bf5af2', 0.78) + blob('aur-d', '8%', '100%', '72%', '#30bed2', 0.72);
+const blob = (id: string, cx: string, cy: string, color: string, opacity: number): string =>
+  `<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="70%"><stop offset="0" stop-color="${color}" stop-opacity="${opacity}"/><stop offset=".7" stop-color="${color}" stop-opacity="0"/></radialGradient>`;
 const fill = (paint: string): string => `<rect width="1024" height="1024" fill="${paint}"/>`;
-const ring = (d: string): string => `<path d="${d}" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>`;
 save(
   'logo.svg',
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><defs>${markDefs}${aurora}`
-    + `<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="46"/></filter>`
-    + `<filter id="drop" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="1.4" stdDeviation="1.6" flood-color="#000" flood-opacity=".45"/></filter></defs>`
-    + fill('#0a0c1e') + fill('url(#aur-a)') + fill('url(#aur-b)') + fill('url(#aur-c)') + fill('url(#aur-d)')
-    + `<ellipse cx="446" cy="620" rx="300" ry="270" fill="#935FF7" opacity=".5" filter="url(#glow)"/>`
-    + `<g transform="translate(104 138) scale(12)"><g filter="url(#drop)">${mark}</g>${ring('M60.5 4.5 Q63.6 9 62.4 14.4')}${ring('M37.6 3.2 Q33.4 5.6 32.4 10.4')}</g></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><defs>${markDefs}`
+    + `<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#DCE5FA"/></linearGradient>`
+    + blob('pastel-a', '90%', '6%', '#B8C2FF', 0.7) + blob('pastel-b', '6%', '96%', '#A3F3E9', 0.6)
+    + `<filter id="drop" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#14285A" flood-opacity=".3"/></filter></defs>`
+    + fill('url(#bg)') + fill('url(#pastel-a)') + fill('url(#pastel-b)')
+    + `<g transform="translate(128 150) scale(24)" filter="url(#drop)">${mark}</g></svg>`,
 );
