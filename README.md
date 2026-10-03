@@ -61,12 +61,35 @@ Cần Flutter 3.41.4 (`fvm use` đọc `.fvmrc`).
   App chạy nền / đã tắt: hệ điều hành hiện như mọi thông báo khác.
 - Thông báo cùng một lượt chạy **thay** nhau (không chồng thành dãy).
 
+## Giao diện và âm báo
+
+- Giao diện theo theme **kính** của web bow: hình nền Cực quang, tấm kính mờ, nút viên thuốc, dấu hồng tâm. Bảng màu
+  chép từ `web/styles.css` của bow-agent vào `lib/theme.dart` (hai bản sáng / tối theo máy) — đổi màu ở web thì đổi
+  lại ở đó.
+- **Mỗi việc một âm riêng**, nghe là biết mà không cần nhìn máy:
+
+  | Âm | Khi nào | Kênh Android |
+  | --- | --- | --- |
+  | `bow_ask` — đi lên, bỏ lửng | agent chờ bạn duyệt / đang hỏi / gửi thử | `bow_ask` |
+  | `bow_done` — hợp âm trưởng rải lên rồi đậu lại | lượt chạy xong | `bow_done` |
+  | `bow_fail` — đi xuống, trầm | lượt chạy lỗi | `bow_fail` |
+
+  Ba âm được **tổng hợp** bằng `python3 tool/make_sounds.py` (không dùng mẫu thu sẵn), ghi ra
+  `android/app/src/main/res/raw/` và `ios/Runner/`. Muốn đổi âm thì sửa bảng nốt trong script rồi chạy lại.
+  Android khoá âm theo kênh ngay lúc tạo: đổi âm của kênh đã có thì phải đổi cả ID kênh (`MainActivity.kt`) lẫn
+  `channel_id` server gửi (`src/core/fcm.ts` của bow-agent).
+- Android không tự hiện thông báo khi app đang mở, nên app tự dựng (kênh native `bow/notify`) — vẫn kêu, vẫn hiện nổi.
+- Sau khi cập nhật app phải **mở app một lần** để các kênh thông báo mới được tạo.
+- Icon: `tool/icon.svg` là bản gốc. Android dùng vector (`ic_launcher_*`, `ic_stat_bow`); iOS cần PNG — mở file SVG
+  bằng Chrome ở khung 1024×1024, chụp lại, rồi `sips -z <cỡ> <cỡ>` vào từng file trong `AppIcon.appiconset`.
+
 ## Không nhận được thông báo?
 
 | Triệu chứng | Chỗ xem |
 | --- | --- |
 | "Gửi thử" trên web báo lỗi | Dòng lỗi là nguyên văn của Google / FCM: khoá bị thu hồi, sai dự án, API *Firebase Cloud Messaging API (V1)* chưa bật. |
 | Web báo đã gửi, điện thoại im | Vừa ghép xong thì chờ một phút rồi thử lại. Kiểm quyền thông báo của app; Android: kiểm chế độ tiết kiệm pin. |
+| Có thông báo nhưng không kêu | Máy đang im lặng / rung; hoặc kênh `Bow · …` bị tắt âm trong Cài đặt → Thông báo của app. Một số máy (Xiaomi, Oppo…) tắt sẵn âm + hiện nổi của app cài ngoài — bật lại ở đó. |
 | iOS không bao giờ nhận | Chưa tải khoá APNs lên Firebase, hoặc chưa chọn Team (không có quyền Push). Máy ảo iOS chỉ nhận push trên Mac chip Apple. |
 | App báo "mã ghép thuộc dự án khác" | Khoá service account dán vào bow không thuộc dự án `bow-agent-ai`. |
 | App mở lên báo "Chưa có cấu hình Firebase" | Thiếu `google-services.json` / `GoogleService-Info.plist` trong bản build. |

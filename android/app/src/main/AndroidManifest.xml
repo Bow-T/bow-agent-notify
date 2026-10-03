@@ -30,11 +30,17 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- Kênh thông báo của bow (MainActivity tạo, mức ưu tiên cao ⇒ hiện nổi). Server gửi kèm `channel_id: bow`;
-             khai thêm ở đây để thông báo không ghi kênh cũng vào đúng kênh này. -->
+        <!-- Thông báo FCM tới lúc app chạy nền / đã tắt do hệ điều hành tự dựng từ ba thứ dưới đây. Server gửi kèm
+             channel_id theo loại (bow_ask / bow_done / bow_fail — MainActivity tạo); thiếu thì rơi về kênh mặc định. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="bow" />
+            android:value="bow_ask" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_bow" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/bow_accent" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

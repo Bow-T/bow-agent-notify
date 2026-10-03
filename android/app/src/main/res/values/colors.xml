@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Lam của theme kính (web: biến brass) — màu nhấn của thông báo. -->
+    <color name="bow_accent">#007AFF</color>
+    <!-- Nền lúc app đang mở lên: khớp nền của màn chính để không chớp trắng. -->
+    <color name="bow_launch">#E6ECF6</color>
+</resources>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nền Cực quang của theme kính (web: [data-wallpaper='aurora']) — khớp tool/icon.svg. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M0,0h108v108h-108z" android:fillColor="#0A0C1E" />
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="6" android:centerY="0" android:gradientRadius="84">
+                <item android:offset="0" android:color="#F26260E8" /><item android:offset="0.7" android:color="#006260E8" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="104" android:centerY="2" android:gradientRadius="78">
+                <item android:offset="0" android:color="#EB0A84FF" /><item android:offset="0.7" android:color="#000A84FF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="95" android:centerY="108" android:gradientRadius="84">
+                <item android:offset="0" android:color="#C7BF5AF2" /><item android:offset="0.7" android:color="#00BF5AF2" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="9" android:centerY="108" android:gradientRadius="78">
+                <item android:offset="0" android:color="#B830BED2" /><item android:offset="0.7" android:color="#0030BED2" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

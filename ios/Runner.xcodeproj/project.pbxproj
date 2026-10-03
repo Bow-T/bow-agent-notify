@@ -17,6 +17,9 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		B0A5000100000000000000A1 /* bow_ask.wav in Resources */ = {isa = PBXBuildFile; fileRef = B0A5000100000000000000B2 /* bow_ask.wav */; };
+		B0A5000200000000000000A1 /* bow_done.wav in Resources */ = {isa = PBXBuildFile; fileRef = B0A5000200000000000000B2 /* bow_done.wav */; };
+		B0A5000300000000000000A1 /* bow_fail.wav in Resources */ = {isa = PBXBuildFile; fileRef = B0A5000300000000000000B2 /* bow_fail.wav */; };
 		AB0DED769227F193F0A07202 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E0CABB87C001D412BC7B4BE0 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
@@ -68,6 +71,9 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B0A5000100000000000000B2 /* bow_ask.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = "bow_ask.wav"; path = "Runner/bow_ask.wav"; sourceTree = "<group>"; };
+		B0A5000200000000000000B2 /* bow_done.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = "bow_done.wav"; path = "Runner/bow_done.wav"; sourceTree = "<group>"; };
+		B0A5000300000000000000B2 /* bow_fail.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = "bow_fail.wav"; path = "Runner/bow_fail.wav"; sourceTree = "<group>"; };
 		E0CABB87C001D412BC7B4BE0 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Runner/GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -143,6 +149,9 @@
 				85F623AFB1B864E9A5DCBE82 /* Pods */,
 				0D1981CD288D10936F06F9CF /* Frameworks */,
 				E0CABB87C001D412BC7B4BE0 /* GoogleService-Info.plist */,
+				B0A5000100000000000000B2 /* bow_ask.wav */,
+				B0A5000200000000000000B2 /* bow_done.wav */,
+				B0A5000300000000000000B2 /* bow_fail.wav */,
 			);
 			sourceTree = "<group>";
 		};
@@ -272,6 +281,9 @@
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 				AB0DED769227F193F0A07202 /* GoogleService-Info.plist in Resources */,
+				B0A5000100000000000000A1 /* bow_ask.wav in Resources */,
+				B0A5000200000000000000A1 /* bow_done.wav in Resources */,
+				B0A5000300000000000000A1 /* bow_fail.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
