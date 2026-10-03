@@ -27,7 +27,8 @@ android {
         applicationId = "dev.bow.bow_notify"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // Android 8+: kênh thông báo (mỗi kênh một âm riêng) và icon thích ứng luôn có — khỏi nhánh cho máy cũ.
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

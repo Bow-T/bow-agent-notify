@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'pairing.dart';
+import 'theme.dart';
 
 /// Quét mã QR ghép máy. Trả chuỗi mã ghép qua `Navigator.pop` ngay khi thấy một mã của bow; QR khác bị bỏ qua.
 class ScanPage extends StatefulWidget {
@@ -32,24 +33,71 @@ class _ScanPageState extends State<ScanPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body: Stack(
-        children: [
-          MobileScanner(onDetect: _onDetect),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              width: double.infinity,
-              color: Colors.black54,
-              padding: const EdgeInsets.all(16),
-              child: SafeArea(
-                top: false,
-                child: Text(widget.hint, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+    // Hình camera gần như luôn tối ⇒ lớp phủ dùng bản TỐI của kính, bất kể máy đang ở chế độ sáng.
+    return Theme(
+      data: bowTheme(Brightness.dark),
+      child: Builder(
+        builder: (context) {
+          final c = Bow.of(context);
+          return Scaffold(
+            backgroundColor: Colors.black,
+            extendBodyBehindAppBar: true,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              foregroundColor: Colors.white,
+              title: Text(
+                widget.title,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
-          ),
-        ],
+            body: Stack(
+              children: [
+                Positioned.fill(child: MobileScanner(onDetect: _onDetect)),
+                // Khung ngắm: bốn góc bo + dấu hồng tâm của bow ở giữa.
+                Center(
+                  child: Container(
+                    width: 250,
+                    height: 250,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(34),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        width: 2,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: BrandMark(
+                      size: 40,
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: SafeArea(
+                    minimum: const EdgeInsets.all(16),
+                    child: Glass(
+                      child: Row(
+                        children: [
+                          Icon(Icons.qr_code_scanner_rounded, color: c.accent),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              widget.hint,
+                              style: TextStyle(color: c.ink, height: 1.4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

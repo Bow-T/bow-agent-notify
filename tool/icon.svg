@@ -1,0 +1,23 @@
+<!-- Icon gốc của Bow Notify: dấu hồng tâm của web bow (App.tsx, .brand-mark) trên nền Cực quang của theme kính.
+     Dựng PNG: mở file này bằng Chrome ở khung 1024×1024, chụp, rồi `sips -z` ra các cỡ của iOS (xem README). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="a" cx="6%" cy="0%" r="78%"><stop offset="0" stop-color="#6260e8" stop-opacity=".95"/><stop offset=".7" stop-color="#6260e8" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b" cx="96%" cy="2%" r="72%"><stop offset="0" stop-color="#0a84ff" stop-opacity=".92"/><stop offset=".7" stop-color="#0a84ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="c" cx="88%" cy="100%" r="78%"><stop offset="0" stop-color="#bf5af2" stop-opacity=".78"/><stop offset=".7" stop-color="#bf5af2" stop-opacity="0"/></radialGradient>
+    <radialGradient id="d" cx="8%" cy="100%" r="72%"><stop offset="0" stop-color="#30bed2" stop-opacity=".72"/><stop offset=".7" stop-color="#30bed2" stop-opacity="0"/></radialGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="22"/></filter>
+    <g id="mark" fill="none" stroke="#fff" stroke-linecap="round">
+      <circle cx="512" cy="512" r="265" stroke-width="40"/>
+      <path d="M512 196v632M196 512h632" stroke-width="25"/>
+      <circle cx="512" cy="512" r="66" fill="#fff" stroke="none"/>
+    </g>
+  </defs>
+  <rect width="1024" height="1024" fill="#0a0c1e"/>
+  <rect width="1024" height="1024" fill="url(#a)"/>
+  <rect width="1024" height="1024" fill="url(#b)"/>
+  <rect width="1024" height="1024" fill="url(#c)"/>
+  <rect width="1024" height="1024" fill="url(#d)"/>
+  <use href="#mark" opacity=".5" filter="url(#glow)"/>
+  <use href="#mark"/>
+</svg>
