@@ -6,9 +6,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pairing.dart';
+import 'remote.dart';
 import 'scan_page.dart';
 import 'theme.dart';
 
@@ -193,9 +195,18 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final _messaging = FirebaseMessaging.instance;
   List<Pairing> _pairings = [];
+
+  /// Thẻ đang chờ trên các máy cho duyệt từ điện thoại (remote.dart) — cũ nhất trước.
+  List<PendingCard> _pending = [];
+
+  /// Thẻ đang gửi quyết định (khoá nút), và thẻ vừa gửi xong (ẩn tạm tới khi máy chạy bow gỡ nó).
+  final Set<String> _sending = {};
+  final Map<String, DateTime> _answeredAt = {};
+  Timer? _pendingTimer;
+  StreamSubscription<RemoteMessage>? _openedSub;
 
   /// Thông báo tới lúc app đang mở — mới nhất trước.
   final List<Received> _recent = [];
@@ -206,11 +217,15 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_start());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pendingTimer?.cancel();
+    _openedSub?.cancel();
     _sub?.cancel();
     super.dispose();
   }
@@ -229,12 +244,127 @@ class _HomePageState extends State<HomePage> {
       sound: true,
     );
     _sub = FirebaseMessaging.onMessage.listen(_onMessage);
+    // Bấm vào thông báo để mở app: đọc ngay thẻ đang chờ.
+    _openedSub = FirebaseMessaging.onMessageOpenedApp.listen(
+      (_) => unawaited(_refreshPending()),
+    );
     if (!mounted) return;
     setState(() {
       _pairings = saved;
       _notifyDenied =
           settings.authorizationStatus == AuthorizationStatus.denied;
     });
+    _watchPending();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _watchPending();
+    } else {
+      _pendingTimer
+          ?.cancel(); // app khuất thì thôi hỏi — thông báo đẩy sẽ gọi dậy
+      _pendingTimer = null;
+    }
+  }
+
+  /// Đọc thẻ chờ ngay, rồi hỏi lại mỗi 4 giây chừng nào app còn ở trước mặt và có máy cho duyệt.
+  void _watchPending() {
+    _pendingTimer?.cancel();
+    _pendingTimer = null;
+    unawaited(_refreshPending());
+    if (!_pairings.any((p) => p.canApprove)) return;
+    _pendingTimer = Timer.periodic(
+      const Duration(seconds: 4),
+      (_) => unawaited(_refreshPending()),
+    );
+  }
+
+  Future<void> _refreshPending() async {
+    final sources = _pairings.where((p) => p.canApprove).toList();
+    // Một máy không đọc được (mất mạng) không được làm mất thẻ của máy khác.
+    final results = await Future.wait(
+      sources.map(
+        (p) => fetchPending(p).catchError((Object _) => <PendingCard>[]),
+      ),
+    );
+    if (!mounted) return;
+    final now = DateTime.now();
+    // Thẻ vừa trả lời: ẩn 15 giây chờ máy chạy bow áp + gỡ. Quá hạn mà còn đó thì hiện lại (bow chưa nhận).
+    _answeredAt.removeWhere(
+      (_, at) => now.difference(at) > const Duration(seconds: 15),
+    );
+    final cards = [
+      for (final list in results)
+        for (final card in list)
+          if (!_answeredAt.containsKey(card.id)) card,
+    ];
+    if (cards.length != _pending.length ||
+        !Iterable<int>.generate(
+          cards.length,
+        ).every((i) => cards[i].id == _pending[i].id)) {
+      setState(() => _pending = cards);
+    }
+  }
+
+  /// Thao tác rủi ro: xác thực bằng vân tay / khuôn mặt / mật mã máy trước khi gửi "cho phép". Máy không có khoá
+  /// màn hình thì hỏi lại bằng một hộp xác nhận — vẫn hơn một cú chạm nhầm.
+  Future<bool> _confirmRisky(PendingCard card) async {
+    final auth = LocalAuthentication();
+    try {
+      if (await auth.isDeviceSupported()) {
+        return await auth.authenticate(
+          localizedReason: t(
+            'Xác nhận để cho phép thao tác rủi ro trên ${card.pairing.host}',
+            'Confirm to allow a risky action on ${card.pairing.host}',
+          ),
+        );
+      }
+    } catch (_) {
+      // chưa đặt khoá màn hình / chưa đăng ký sinh trắc → rơi xuống hộp xác nhận
+    }
+    if (!mounted) return false;
+    final ok = await showGlassDialog<bool>(
+      context,
+      title: t('Cho phép thao tác rủi ro?', 'Allow a risky action?'),
+      content: Text(card.text, maxLines: 8, overflow: TextOverflow.ellipsis),
+      actions: (close) => [
+        GlassButton(label: t('Thôi', 'Cancel'), onPressed: () => close(false)),
+        GlassButton(
+          label: t('Cho phép', 'Allow'),
+          kind: GlassButtonKind.danger,
+          onPressed: () => close(true),
+        ),
+      ],
+    );
+    return ok == true;
+  }
+
+  /// Gửi quyết định cho một thẻ: `{allow: bool}` hoặc `{answers: {...} | null}`.
+  Future<void> _decide(PendingCard card, Map<String, Object?> reply) async {
+    if (_sending.contains(card.id)) return;
+    if (card.risky && reply['allow'] == true && !await _confirmRisky(card)) {
+      return;
+    }
+    setState(() => _sending.add(card.id));
+    try {
+      await sendReply(card, reply);
+      _answeredAt[card.id] = DateTime.now();
+      if (mounted) {
+        setState(
+          () => _pending = _pending.where((c) => c.id != card.id).toList(),
+        );
+      }
+    } catch (e) {
+      _say(
+        t(
+          'Không gửi được ($e). Thẻ này có thể đã được trả lời, hoặc bow không còn chạy.',
+          'Could not send ($e). The card may already be answered, or bow is no longer running.',
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _sending.remove(card.id));
+    }
   }
 
   /// Tin tới lúc app đang mở: ghi vào "Vừa nhận", và trên Android tự dựng thông báo (đúng kênh ⇒ đúng âm) vì hệ
@@ -242,6 +372,7 @@ class _HomePageState extends State<HomePage> {
   void _onMessage(RemoteMessage message) {
     final note = message.notification;
     if (note == null) return;
+    unawaited(_refreshPending());
     if (defaultTargetPlatform == TargetPlatform.android) {
       unawaited(
         _native
@@ -307,6 +438,7 @@ class _HomePageState extends State<HomePage> {
           .timeout(const Duration(seconds: 20));
       setState(() => _pairings = [..._pairings, pairing]);
       await _save();
+      _watchPending();
       _say(
         t(
           'Đã ghép với ${pairing.host}. Bấm "Gửi thử" trên web để kiểm.',
@@ -358,6 +490,7 @@ class _HomePageState extends State<HomePage> {
           _pairings = _pairings.where((p) => p.topic != pairing.topic).toList(),
     );
     await _save();
+    _watchPending();
   }
 
   Future<void> _scan() async {
@@ -494,6 +627,24 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
+        if (_pending.isNotEmpty) ...[
+          _SectionTitle(
+            t(
+              'Chờ bạn duyệt · ${_pending.length}',
+              'Waiting for you · ${_pending.length}',
+            ),
+          ),
+          for (final card in _pending)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: PendingCardView(
+                key: ValueKey(card.id),
+                card: card,
+                busy: _sending.contains(card.id),
+                onDecide: (reply) => _decide(card, reply),
+              ),
+            ),
+        ],
         if (paired) ...[
           _SectionTitle(t('Máy đã ghép', 'Paired machines')),
           for (final pairing in _pairings)
@@ -520,7 +671,12 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           Text(
-                            'Firebase · ${pairing.projectId}',
+                            pairing.canApprove
+                                ? t(
+                                    'Firebase · ${pairing.projectId} · duyệt được từ đây',
+                                    'Firebase · ${pairing.projectId} · can approve here',
+                                  )
+                                : 'Firebase · ${pairing.projectId}',
                             style: TextStyle(color: c.muted, fontSize: 12.5),
                           ),
                         ],
@@ -608,6 +764,241 @@ class _SectionTitle extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Một thẻ đang chờ trên máy chạy bow: xin duyệt (Cho phép / Từ chối) hoặc câu hỏi (chọn đáp án rồi Gửi).
+class PendingCardView extends StatefulWidget {
+  const PendingCardView({
+    super.key,
+    required this.card,
+    required this.busy,
+    required this.onDecide,
+  });
+
+  final PendingCard card;
+  final bool busy;
+
+  /// `{allow: bool}` cho thẻ duyệt; `{answers: {câu hỏi: nhãn đã chọn} | null}` cho câu hỏi (null = bỏ qua).
+  final void Function(Map<String, Object?> reply) onDecide;
+
+  @override
+  State<PendingCardView> createState() => _PendingCardViewState();
+}
+
+class _PendingCardViewState extends State<PendingCardView> {
+  /// Đáp án đang chọn: câu hỏi → các nhãn.
+  final Map<String, Set<String>> _picks = {};
+
+  bool _picked(Question q, String label) =>
+      _picks[q.question]?.contains(label) ?? false;
+
+  void _toggle(Question q, String label) {
+    setState(() {
+      final picks = _picks.putIfAbsent(q.question, () => {});
+      if (!q.multiSelect) {
+        picks
+          ..clear()
+          ..add(label);
+      } else if (!picks.remove(label)) {
+        picks.add(label);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Bow.of(context);
+    final card = widget.card;
+    final isQuestion = card.kind == 'question';
+    final answered = card.questions.every(
+      (q) => _picks[q.question]?.isNotEmpty ?? false,
+    );
+    final onDecide = widget.busy ? null : widget.onDecide;
+    return Glass(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon3d(isQuestion ? 'chat' : 'shield', size: 34),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      card.label.isEmpty ? t('Tác vụ', 'Task') : card.label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: c.ink,
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      [
+                        if (card.pairing.host.isNotEmpty) card.pairing.host,
+                        if (card.tool.isNotEmpty) card.tool,
+                        TimeOfDay.fromDateTime(card.at).format(context),
+                      ].join(' · '),
+                      style: TextStyle(color: c.muted, fontSize: 12.5),
+                    ),
+                  ],
+                ),
+              ),
+              if (card.risky) ...[
+                const Icon3d('warning', size: 22),
+                const SizedBox(width: 4),
+                Text(
+                  t('Rủi ro', 'Risky'),
+                  style: TextStyle(
+                    color: c.danger,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (!isQuestion)
+            // Lệnh / file cần duyệt: chữ đều nét trong ô lõm, cuộn được khi dài.
+            Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(maxHeight: 190),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: c.well,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: c.hairline),
+              ),
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  card.text,
+                  style: TextStyle(
+                    color: c.ink,
+                    fontSize: 13,
+                    height: 1.4,
+                    fontFamily: 'monospace',
+                    fontFamilyFallback: const ['Menlo', 'Courier'],
+                  ),
+                ),
+              ),
+            )
+          else
+            for (final q in card.questions) ...[
+              Text(
+                q.question,
+                style: TextStyle(
+                  color: c.ink,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 6),
+              for (final option in q.options)
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: widget.busy ? null : () => _toggle(q, option.label),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 7,
+                      horizontal: 4,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Ô chọn phẳng một màu (như bộ tiện ích của web): phải đổi màu theo trạng thái.
+                        Icon(
+                          switch ((_picked(q, option.label), q.multiSelect)) {
+                            (true, true) => Icons.check_box_rounded,
+                            (true, false) => Icons.radio_button_checked_rounded,
+                            (false, true) =>
+                              Icons.check_box_outline_blank_rounded,
+                            (false, false) =>
+                              Icons.radio_button_unchecked_rounded,
+                          },
+                          size: 22,
+                          color: _picked(q, option.label) ? c.accent : c.muted,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                option.label,
+                                style: TextStyle(color: c.ink, fontSize: 14.5),
+                              ),
+                              if (option.description.isNotEmpty)
+                                Text(
+                                  option.description,
+                                  style: TextStyle(
+                                    color: c.muted,
+                                    fontSize: 12.5,
+                                    height: 1.35,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 6),
+            ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: GlassButton(
+                  label: isQuestion
+                      ? t('Bỏ qua', 'Skip')
+                      : t('Từ chối', 'Deny'),
+                  onPressed: onDecide == null
+                      ? null
+                      : () => onDecide(
+                          isQuestion ? {'answers': null} : {'allow': false},
+                        ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: GlassButton(
+                  label: widget.busy
+                      ? t('Đang gửi…', 'Sending…')
+                      : isQuestion
+                      ? t('Gửi', 'Send')
+                      : t('Cho phép', 'Allow'),
+                  // Vân tay = icon phẳng trắng trên nền lam (hình 3D chìm trên nền màu nhấn).
+                  icon: card.risky ? Icons.fingerprint_rounded : null,
+                  kind: GlassButtonKind.primary,
+                  onPressed: onDecide == null || (isQuestion && !answered)
+                      ? null
+                      : () => onDecide(
+                          isQuestion
+                              ? {
+                                  'answers': {
+                                    for (final q in card.questions)
+                                      q.question: _picks[q.question]!.join(
+                                        ', ',
+                                      ),
+                                  },
+                                }
+                              : {'allow': true},
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Hộp thoại bằng kính. `actions` nhận hàm đóng hộp kèm kết quả.

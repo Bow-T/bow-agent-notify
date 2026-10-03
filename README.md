@@ -61,6 +61,27 @@ Cần Flutter 3.41.4 (`fvm use` đọc `.fvmrc`).
   App chạy nền / đã tắt: hệ điều hành hiện như mọi thông báo khác.
 - Thông báo cùng một lượt chạy **thay** nhau (không chồng thành dãy).
 
+## Duyệt ngay trên điện thoại (tuỳ chọn)
+
+Mặc định app chỉ báo. Bật ở web bow: hộp Thông báo điện thoại → **Duyệt từ điện thoại → Qua Firebase**, dán địa chỉ
+Realtime Database của dự án, rồi **quét lại mã QR** (mã mới mang thêm khoá duyệt). Dòng máy đã ghép sẽ ghi "duyệt được
+từ đây", và khi agent chờ bạn, mục **Chờ bạn duyệt** hiện ở đầu màn hình:
+
+- Thẻ duyệt: xem lệnh rồi bấm **Cho phép** / **Từ chối**. Thao tác rủi ro (`git push`, `rm`…) có nhãn "Rủi ro" và đòi
+  vân tay / Face ID / mật mã máy trước khi gửi. Máy chưa đặt khoá màn hình thì hỏi lại bằng một hộp xác nhận.
+- Thẻ câu hỏi: chọn đáp án rồi **Gửi**, hoặc **Bỏ qua**.
+- Thẻ sửa file chỉ hiện đường dẫn + số dòng thay đổi — muốn soi nội dung thì về máy.
+
+Nó hoạt động thế nào (`lib/remote.dart`, nửa server ở `src/core/remoteApproval.ts` của bow-agent):
+
+- Máy chạy bow ghi thẻ lên Realtime Database, app đọc (mỗi 4 giây khi app đang mở, và ngay khi có thông báo tới);
+  app ghi quyết định, máy chạy bow đọc rồi tự áp. Khác mạng vẫn được, máy chạy bow không mở cổng nào.
+- Mọi thứ đi qua đó là bản mã AES-256-GCM bằng **khoá ghép máy** trong mã QR: Google chỉ thấy bản mã, và quyết định
+  không tạo được bằng đúng khoá thì máy chạy bow bỏ. Vì thế **mã QR lúc này là chìa khoá duyệt** — lộ thì bấm "Đổi mã
+  ghép" trên web.
+- Khoá lưu trong vùng dữ liệu riêng của app (SharedPreferences), không hiện ra màn hình, không ghi log.
+- Vân tay là chốt ở phía app: nó chặn chạm nhầm và người khác cầm máy đang mở khoá, không chặn được kẻ đã có khoá ghép.
+
 ## Giao diện và âm báo
 
 - Giao diện theo theme **kính** của web bow: hình nền Cực quang, tấm kính mờ, nút viên thuốc, dấu hồng tâm. Bảng màu
@@ -101,6 +122,8 @@ Cần Flutter 3.41.4 (`fvm use` đọc `.fvmrc`).
 | Có thông báo nhưng không kêu | Máy đang im lặng / rung; hoặc kênh `Bow · …` bị tắt âm trong Cài đặt → Thông báo của app. Một số máy (Xiaomi, Oppo…) tắt sẵn âm + hiện nổi của app cài ngoài — bật lại ở đó. |
 | iOS không bao giờ nhận | Chưa tải khoá APNs lên Firebase, hoặc chưa chọn Team (không có quyền Push). Máy ảo iOS chỉ nhận push trên Mac chip Apple. |
 | App báo "mã ghép thuộc dự án khác" | Khoá service account dán vào bow không thuộc dự án `bow-agent-ai`. |
+| Thẻ không hiện ở "Chờ bạn duyệt" | Máy đó chưa bật *Duyệt từ điện thoại* (dòng máy đã ghép không ghi "duyệt được từ đây") → bật trên web rồi quét lại mã. Thẻ chỉ lên sau khi treo 1,5 giây. |
+| Bấm Cho phép báo "Không gửi được" | Thẻ đã có trả lời (mỗi thẻ ghi một lần), hoặc bow không còn chạy / trang bow đã đóng. |
 | App mở lên báo "Chưa có cấu hình Firebase" | Thiếu `google-services.json` / `GoogleService-Info.plist` trong bản build. |
 
 ## Dùng cho một dự án Firebase khác

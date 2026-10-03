@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Xác thực vân tay / khuôn mặt trước khi cho phép một thao tác rủi ro từ điện thoại. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <application
         android:label="Bow Notify"
         android:name="${applicationName}"
