@@ -7,11 +7,12 @@ import android.app.PendingIntent
 import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Bundle
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-class MainActivity : FlutterActivity() {
+// FlutterFragmentActivity (không phải FlutterActivity): hộp xác thực vân tay của local_auth cần một FragmentActivity.
+class MainActivity : FlutterFragmentActivity() {
     /**
      * Ba kênh, mỗi kênh một âm riêng (tool/make_sounds.py) — nghe là biết agent đang CHỜ, đã XONG hay LỖI.
      * Android khoá âm theo kênh ngay lúc tạo: đổi âm thì phải đổi cả ID kênh ở đây lẫn `channel_id` server gửi
