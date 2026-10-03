@@ -40,13 +40,14 @@ const _native = MethodChannel('bow/notify');
 /// Một thông báo đã tới lúc app đang mở.
 typedef Received = ({String kind, String title, String body, DateTime at});
 
-/// Hình + màu của từng loại thông báo (`data.kind` do server gửi: approval / question / done / fatal / test).
-({IconData icon, Color color}) kindLook(String kind, Bow c) => switch (kind) {
-  'approval' => (icon: Icons.verified_user_rounded, color: c.accent),
-  'question' => (icon: Icons.forum_rounded, color: c.teal),
-  'done' => (icon: Icons.check_circle_rounded, color: c.ok),
-  'fatal' => (icon: Icons.error_rounded, color: c.danger),
-  _ => (icon: Icons.bolt_rounded, color: c.accent),
+/// Icon 3D của từng loại thông báo (`data.kind` do server gửi: approval / question / done / fatal / test) — cùng hình
+/// với web bow: khiên = chờ duyệt, bong bóng = đang hỏi, bi xanh = xong, bi đỏ = lỗi.
+String kindIcon(String kind) => switch (kind) {
+  'approval' => 'shield',
+  'question' => 'chat',
+  'done' => 'success',
+  'fatal' => 'error',
+  _ => 'bolt',
 };
 
 class BowNotifyApp extends StatelessWidget {
@@ -96,7 +97,7 @@ class BowScaffold extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(20, 14, 14, 6),
                   child: Row(
                     children: [
-                      BrandMark(size: 26, color: c.accent),
+                      const Icon3d('logo_mark', size: 36),
                       const SizedBox(width: 10),
                       Text(
                         'BOW',
@@ -410,7 +411,7 @@ class _HomePageState extends State<HomePage> {
       action: IconButton(
         onPressed: _busy ? null : _enterCode,
         tooltip: t('Dán mã ghép', 'Paste pairing code'),
-        icon: Icon(Icons.content_paste_rounded, color: c.ink),
+        icon: const Icon3d('clipboard', size: 28),
       ),
       bottom: SizedBox(
         width: double.infinity,
@@ -418,6 +419,7 @@ class _HomePageState extends State<HomePage> {
           label: _busy
               ? t('Đang ghép…', 'Pairing…')
               : t('Quét mã ghép', 'Scan pairing code'),
+          // Icon phẳng màu trắng, không phải 3D: hình 3D có màu riêng nên chìm trên nền lam của nút (luật của bộ icon web).
           icon: Icons.qr_code_scanner_rounded,
           kind: GlassButtonKind.primary,
           large: true,
@@ -477,7 +479,7 @@ class _HomePageState extends State<HomePage> {
             tint: c.danger.withValues(alpha: 0.16),
             child: Row(
               children: [
-                Icon(Icons.notifications_off_rounded, color: c.danger),
+                const Icon3d('warning', size: 30),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -501,7 +503,7 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
                 child: Row(
                   children: [
-                    _IconTile(icon: Icons.laptop_mac_rounded, color: c.accent),
+                    const Icon3d('agent', size: 38),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -527,7 +529,7 @@ class _HomePageState extends State<HomePage> {
                     IconButton(
                       onPressed: () => _unpair(pairing),
                       tooltip: t('Bỏ ghép', 'Unpair'),
-                      icon: Icon(Icons.link_off_rounded, color: c.muted),
+                      icon: const Icon3d('trash', size: 26),
                     ),
                   ],
                 ),
@@ -546,10 +548,7 @@ class _HomePageState extends State<HomePage> {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     child: Row(
                       children: [
-                        _IconTile(
-                          icon: kindLook(item.kind, c).icon,
-                          color: kindLook(item.kind, c).color,
-                        ),
+                        Icon3d(kindIcon(item.kind), size: 36),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -608,25 +607,6 @@ class _SectionTitle extends StatelessWidget {
         letterSpacing: 0.8,
       ),
     ),
-  );
-}
-
-/// Ô vuông bo góc nhuộm màu chứa một icon — kiểu icon nhiều màu của web bow.
-class _IconTile extends StatelessWidget {
-  const _IconTile({required this.icon, required this.color});
-
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 38,
-    height: 38,
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.16),
-      borderRadius: BorderRadius.circular(11),
-    ),
-    child: Icon(icon, color: color, size: 21),
   );
 }
 

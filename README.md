@@ -80,8 +80,16 @@ Cần Flutter 3.41.4 (`fvm use` đọc `.fvmrc`).
   `channel_id` server gửi (`src/core/fcm.ts` của bow-agent).
 - Android không tự hiện thông báo khi app đang mở, nên app tự dựng (kênh native `bow/notify`) — vẫn kêu, vẫn hiện nổi.
 - Sau khi cập nhật app phải **mở app một lần** để các kênh thông báo mới được tạo.
-- Icon: `tool/icon.svg` là bản gốc. Android dùng vector (`ic_launcher_*`, `ic_stat_bow`); iOS cần PNG — mở file SVG
-  bằng Chrome ở khung 1024×1024, chụp lại, rồi `sips -z <cỡ> <cỡ>` vào từng file trong `AppIcon.appiconset`.
+- **Icon là bộ "kẹo 3D" của web bow** (`web/icons3d.ts` bên bow-agent): khiên = chờ duyệt, bong bóng = đang hỏi, bi
+  xanh = xong, bi đỏ = lỗi… **Logo app** = robot agent + chuông thông báo, ghép từ chính hai hình trong bộ đó.
+  Hai repo không chung mã nên hình được xuất sang đây:
+  ```sh
+  node --import <bow-agent>/node_modules/tsx/dist/esm/index.mjs tool/export_icons.mts <bow-agent>/web/icons3d.ts   # → tool/icons/*.svg
+  tool/render_icons.sh   # → assets/icons/*.png, icon app iOS, lớp trước icon thích ứng Android (cần `brew install librsvg`)
+  ```
+  Nút trên nền lam (Quét mã ghép) dùng icon phẳng màu trắng — hình 3D có màu riêng nên chìm trên nền màu nhấn.
+  Icon thông báo trên thanh trạng thái và icon "theo màu chủ đề" của Android là hình robot MỘT MÀU (vector trong
+  `res/drawable`) vì Android chỉ lấy hình rồi tự tô màu.
 
 ## Không nhận được thông báo?
 
