@@ -13,6 +13,7 @@ import '../scan/scan_page.dart';
 import 'home_vm.dart';
 import '../tabs/tab_page.dart';
 import '../tabs/tabs_vm.dart';
+import '../tabs/typing_gate.dart';
 import 'widgets/machine_tabs_section.dart';
 import 'widgets/machine_tile.dart';
 import 'widgets/pending_card_view.dart';
@@ -54,6 +55,8 @@ class _HomePageState extends ConsumerState<HomePage>
     } else {
       _vm.paused();
       tabs.paused();
+      // App ra nền: khoá lại quyền gõ lệnh (lần sau phải qua vân tay).
+      ref.read(typingGateProvider.notifier).lock();
     }
   }
 

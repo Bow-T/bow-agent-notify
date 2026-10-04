@@ -72,4 +72,19 @@ void main() {
       expect(MirrorItem.fromJson({'kind': 'agent', 'text': 'x'}), isNull);
     },
   );
+
+  test(
+    'quyền gõ: chỉ có khi máy chạy bow ghi `say` trong danh sách việc được làm',
+    () {
+      MachineTabs tabs(Object? can) => MachineTabs.fromJson(_pairing, '4000', {
+        'at': 1,
+        'tabs': [],
+        'can': ?can,
+      })!;
+      expect(tabs(['say']).canSay, isTrue);
+      expect(tabs([]).canSay, isFalse);
+      expect(tabs(null).canSay, isFalse); // server bản cũ không gửi trường này
+      expect(tabs('say').canSay, isFalse);
+    },
+  );
 }

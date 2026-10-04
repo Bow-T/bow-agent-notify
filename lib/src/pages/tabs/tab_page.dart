@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../components/glass.dart';
+import '../../components/glass_button.dart';
+import '../../components/glass_dialog.dart';
 import '../../components/icon3d.dart';
 import '../../components/markdown_text.dart';
 import '../../components/wallpaper.dart';
@@ -14,7 +16,8 @@ import 'tabs_vm.dart';
 String _clock(DateTime at) =>
     '${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
 
-/// Hội thoại của một tab trên máy — CHỈ XEM (View). Mở ra ở cuối, nơi có dòng mới nhất.
+/// Hội thoại của một tab trên máy (View). Mở ra ở cuối, nơi có dòng mới nhất. Máy cho phép thì có ô nhập để gõ vào tab
+/// đó; không thì chỉ xem.
 class TabPage extends ConsumerStatefulWidget {
   const TabPage({super.key, required this.tab});
 
@@ -26,6 +29,7 @@ class TabPage extends ConsumerStatefulWidget {
 
 class _TabPageState extends ConsumerState<TabPage> with WidgetsBindingObserver {
   TabVm get _vm => ref.read(tabVmProvider(widget.tab).notifier);
+  final _input = TextEditingController();
 
   @override
   void initState() {
@@ -36,7 +40,46 @@ class _TabPageState extends ConsumerState<TabPage> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _input.dispose();
     super.dispose();
+  }
+
+  /// Máy không có vân tay / khoá màn hình: hỏi lại bằng một hộp xác nhận trước khi mở khoá gõ.
+  Future<bool> _askUnlock() async {
+    if (!mounted) return false;
+    final ok = await showGlassDialog<bool>(
+      context,
+      title: t('Gõ lệnh cho agent?', 'Send prompts to the agent?'),
+      content: Text(
+        t(
+          'Câu bạn gõ sẽ được tab trên máy gửi cho agent như khi bạn gõ ở máy. Mở khoá trong 5 phút.',
+          'What you type is sent to the agent by the tab on the machine, as if you typed there. Unlocks for 5 minutes.',
+        ),
+      ),
+      actions: (close) => [
+        GlassButton(label: t('Thôi', 'Cancel'), onPressed: () => close(false)),
+        GlassButton(
+          label: t('Mở khoá', 'Unlock'),
+          kind: GlassButtonKind.primary,
+          onPressed: () => close(true),
+        ),
+      ],
+    );
+    return ok == true;
+  }
+
+  Future<void> _send() async {
+    final text = _input.text;
+    final error = await _vm.send(text, askFallback: _askUnlock);
+    if (!mounted) return;
+    if (error == null) {
+      // Tab trên máy đã nhận: câu sẽ hiện trong hội thoại sau vài giây. Ô nhập chỉ xoá khi chưa ai gõ thêm.
+      if (_input.text == text) _input.clear();
+    } else if (error.isNotEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(error)));
+    }
   }
 
   @override
@@ -98,7 +141,8 @@ class _TabPageState extends ConsumerState<TabPage> with WidgetsBindingObserver {
                               if (meta != null && meta.project.isNotEmpty)
                                 meta.project,
                               if (machine != null) machine.pairing.host,
-                              t('chỉ xem', 'read-only'),
+                              if (machine?.canSay != true)
+                                t('chỉ xem', 'read-only'),
                             ].join(' · '),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -172,9 +216,100 @@ class _TabPageState extends ConsumerState<TabPage> with WidgetsBindingObserver {
                     ),
                   ),
                 ),
+              // Máy cho gõ + tab còn mở + trang web còn sống ⇒ có ô nhập. Trang web đã im thì không: lệnh gửi đi sẽ
+              // không ai nhận.
+              if (machine?.canSay == true && meta != null && !stale)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                  child: Composer(
+                    controller: _input,
+                    sending: state.sending,
+                    running: meta.running,
+                    onSend: _send,
+                  ),
+                ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Ô gõ vào tab: câu gửi đi được tab trên máy tự gửi cho agent (tab đang chạy thì thành lời nói chen).
+class Composer extends StatelessWidget {
+  const Composer({
+    super.key,
+    required this.controller,
+    required this.sending,
+    required this.running,
+    required this.onSend,
+  });
+
+  final TextEditingController controller;
+
+  /// Câu đang gửi (chưa có báo lại) — khoá ô nhập, hiện vòng xoay.
+  final String? sending;
+
+  /// Tab đang chạy một lượt: câu gửi đi là lời nói chen vào lượt đó.
+  final bool running;
+  final VoidCallback onSend;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Bow.of(context);
+    final busy = sending != null;
+    return Glass(
+      padding: const EdgeInsets.fromLTRB(14, 2, 4, 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              enabled: !busy,
+              minLines: 1,
+              maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
+              style: TextStyle(color: c.ink, fontSize: 14.5, height: 1.35),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                filled: false,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                hintText: busy
+                    ? t('Đang gửi tới máy…', 'Sending to the machine…')
+                    : running
+                    ? t(
+                        'Nói chen vào lượt đang chạy…',
+                        'Add to the running turn…',
+                      )
+                    : t('Gõ cho tab này…', 'Type to this tab…'),
+                hintStyle: TextStyle(color: c.muted, fontSize: 14.5),
+              ),
+            ),
+          ),
+          busy
+              ? Padding(
+                  padding: const EdgeInsets.all(13),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: c.accent,
+                    ),
+                  ),
+                )
+              : IconButton(
+                  onPressed: onSend,
+                  tooltip: t('Gửi', 'Send'),
+                  icon: Icon(Icons.send_rounded, color: c.accent),
+                ),
+        ],
       ),
     );
   }

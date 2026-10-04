@@ -58,6 +58,17 @@ class RemoteService {
     return base64Url.encode(box.concatenation()).replaceAll('=', '');
   }
 
+  /// Mã hoá một LỆNH gõ từ điện thoại (mã [id]) — cùng khuôn với `seal(key, 'command', id, …)` của server. Nhãn riêng
+  /// (`bow-cmd`) nên một trả lời thẻ không bao giờ dùng lại làm lệnh được.
+  Future<String> sealCommand(Pairing pairing, String id, Object command) async {
+    final box = await _aes.encrypt(
+      utf8.encode(jsonEncode(command)),
+      secretKey: _key(pairing),
+      aad: utf8.encode('bow-cmd:$id'),
+    );
+    return base64Url.encode(box.concatenation()).replaceAll('=', '');
+  }
+
   Future<(int, String)> _call(String method, Uri url, [String? body]) async {
     final client = HttpClient()..connectionTimeout = _timeout;
     try {
