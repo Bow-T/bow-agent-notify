@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:bow_notify/version.dart';
+import 'package:bow_notify/src/constants/version.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
