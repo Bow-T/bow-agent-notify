@@ -121,7 +121,8 @@ Nó hoạt động thế nào (`lib/src/services/remote_service.dart`, nửa ser
 - Mọi thứ đi qua đó là bản mã AES-256-GCM bằng **khoá ghép máy** trong mã QR: Google chỉ thấy bản mã, và quyết định
   không tạo được bằng đúng khoá thì máy chạy bow bỏ. Vì thế **mã QR lúc này là chìa khoá duyệt** — lộ thì bấm "Đổi mã
   ghép" trên web.
-- Khoá lưu trong vùng dữ liệu riêng của app (SharedPreferences), không hiện ra màn hình, không ghi log.
+- Khoá lưu trong vùng dữ liệu riêng của app (SharedPreferences), không hiện ra màn hình, không ghi log, và KHÔNG được
+  sao lưu / chuyển sang máy khác (Android: `allowBackup="false"` + `data_extraction_rules.xml`) — đổi máy thì quét lại mã.
 - Vân tay là chốt ở phía app: nó chặn chạm nhầm và người khác cầm máy đang mở khoá, không chặn được kẻ đã có khoá ghép.
 
 ## Giao diện và âm báo
@@ -160,6 +161,7 @@ Nó hoạt động thế nào (`lib/src/services/remote_service.dart`, nửa ser
 | Triệu chứng | Chỗ xem |
 | --- | --- |
 | "Gửi thử" trên web báo lỗi | Dòng lỗi là nguyên văn của Google / FCM: khoá bị thu hồi, sai dự án, API *Firebase Cloud Messaging API (V1)* chưa bật. |
+| Máy ghi "đã ghép", mở app vẫn thấy thẻ, nhưng KHÔNG thông báo nào tới | Đăng ký nhận thông báo đã mất (cài lại app, khôi phục dữ liệu, mã nhận của máy đổi). Từ bản 1.6.1 app tự đăng ký lại mỗi lần mở — mở app một lần khi có mạng; máy nào chưa đăng ký được sẽ có dòng đỏ dưới tên. Bản cũ hơn: bỏ ghép rồi quét lại mã. |
 | Web báo đã gửi, điện thoại im | Vừa ghép xong thì chờ một phút rồi thử lại. Kiểm quyền thông báo của app; Android: kiểm chế độ tiết kiệm pin. |
 | Có thông báo nhưng không kêu | Máy đang im lặng / rung; hoặc kênh `Bow · …` bị tắt âm trong Cài đặt → Thông báo của app. Một số máy (Xiaomi, Oppo…) tắt sẵn âm + hiện nổi của app cài ngoài — bật lại ở đó. |
 | iOS không bao giờ nhận | Chưa tải khoá APNs lên Firebase, hoặc chưa chọn Team (không có quyền Push). Máy ảo iOS chỉ nhận push trên Mac chip Apple. |

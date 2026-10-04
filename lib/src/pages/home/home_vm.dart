@@ -26,6 +26,7 @@ class HomeState {
     this.notifyDenied = false,
     this.busy = false,
     this.canPinWidget = false,
+    this.notListening = const {},
   });
 
   final List<Pairing> pairings;
@@ -48,6 +49,10 @@ class HomeState {
   /// Launcher của máy cho app tự đề nghị ghim widget ra màn hình chính.
   final bool canPinWidget;
 
+  /// Topic của những máy đã ghép mà lần đăng ký nhận thông báo gần nhất HỎNG — máy đó hiện "đã ghép" nhưng thông báo
+  /// của nó sẽ không tới cho tới khi đăng ký lại được.
+  final Set<String> notListening;
+
   HomeState copyWith({
     List<Pairing>? pairings,
     List<PendingCard>? pending,
@@ -56,6 +61,7 @@ class HomeState {
     bool? notifyDenied,
     bool? busy,
     bool? canPinWidget,
+    Set<String>? notListening,
   }) => HomeState(
     pairings: pairings ?? this.pairings,
     pending: pending ?? this.pending,
@@ -64,6 +70,7 @@ class HomeState {
     notifyDenied: notifyDenied ?? this.notifyDenied,
     busy: busy ?? this.busy,
     canPinWidget: canPinWidget ?? this.canPinWidget,
+    notListening: notListening ?? this.notListening,
   );
 }
 
@@ -94,6 +101,7 @@ class HomeVm extends Notifier<HomeState> {
       push.onMessage.listen(_onMessage),
       // Bấm vào thông báo để mở app: đọc ngay thẻ đang chờ.
       push.onOpened.listen((_) => refresh()),
+      push.onTokenRefresh.listen((_) => unawaited(_resubscribe())),
     ];
     // Bấm vào một thông báo app tự dựng (hoặc vừa duyệt bằng nút trên thông báo): cũng đọc lại ngay.
     notifications.opened.addListener(refresh);
@@ -119,6 +127,27 @@ class HomeVm extends Notifier<HomeState> {
       canPinWidget: canPin,
     );
     _watchPending();
+    unawaited(_resubscribe());
+  }
+
+  /// Đăng ký lại topic của MỌI máy đã ghép — mỗi lần app khởi động và mỗi lần mã nhận thông báo của máy đổi.
+  ///
+  /// Đăng ký topic gắn với mã nhận thông báo của lần cài hiện tại; ghép máy chỉ đăng ký MỘT lần. Cài lại app, khôi phục
+  /// dữ liệu hay Google xoay mã là mất đăng ký trong khi danh sách máy vẫn còn: app ghi "đang nghe", mở app vẫn thấy
+  /// thẻ (đọc thẳng từ database), nhưng không thông báo nào tới nữa. Đăng ký lại thì vô hại (đăng ký hai lần như một).
+  Future<void> _resubscribe() async {
+    final failed = <String>{};
+    for (final pairing in state.pairings) {
+      try {
+        await _push.subscribe(pairing.topic);
+      } catch (_) {
+        failed.add(pairing.topic); // mất mạng: lần mở app sau thử lại
+      }
+    }
+    if (!ref.mounted) return;
+    // Máy đã bị bỏ ghép trong lúc chờ thì không tính.
+    final topics = {for (final pairing in state.pairings) pairing.topic};
+    state = state.copyWith(notListening: failed.intersection(topics));
   }
 
   /// Đề nghị ghim một widget ra màn hình chính (launcher hiện hộp xác nhận của nó): thẻ "Chờ bạn duyệt", hoặc viên
@@ -320,6 +349,14 @@ class HomeVm extends Notifier<HomeState> {
       for (final p in state.pairings)
         if (p.topic != pairing.topic) p,
     ]);
+    if (ref.mounted) {
+      state = state.copyWith(
+        notListening: {
+          for (final topic in state.notListening)
+            if (topic != pairing.topic) topic,
+        },
+      );
+    }
     return null;
   }
 

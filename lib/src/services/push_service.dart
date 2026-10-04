@@ -32,6 +32,10 @@ class PushService {
   /// Người dùng bấm vào một thông báo (do hệ điều hành dựng) để mở app.
   Stream<RemoteMessage> get onOpened => FirebaseMessaging.onMessageOpenedApp;
 
+  /// Mã nhận thông báo của máy vừa ĐỔI (cài lại app, khôi phục dữ liệu, Google xoay mã). Đăng ký topic đi theo mã cũ
+  /// ⇒ phải đăng ký lại, không thì máy vẫn hiện "đã ghép" mà không bao giờ nhận gì.
+  Stream<String> get onTokenRefresh => _messaging.onTokenRefresh;
+
   Future<void> subscribe(String topic) =>
       _messaging.subscribeToTopic(topic).timeout(_timeout);
 
