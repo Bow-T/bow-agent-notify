@@ -22,7 +22,15 @@ class RemoteService {
   const RemoteService();
 
   /// Mở một bản mã của server: nonce (12) + bản mã + thẻ xác thực (16), base64url. `null` = sai khoá / bị sửa / sai mã thẻ.
-  Future<Object?> openCard(Pairing pairing, String id, String blob) async {
+  Future<Object?> openCard(Pairing pairing, String id, String blob) =>
+      _open(pairing, 'bow-req:$id', blob);
+
+  /// Mở một bản mã của nhánh "tab trên máy" (danh sách tab: [id] = `tabs`; một dòng chat: `<tab>/<dòng>`). Nhãn riêng
+  /// (`bow-mir`) nên bản mã ở nhánh đó không bao giờ mở ra thành thẻ duyệt, và dòng của tab này không dán được sang tab khác.
+  Future<Object?> openMirror(Pairing pairing, String id, String blob) =>
+      _open(pairing, 'bow-mir:$id', blob);
+
+  Future<Object?> _open(Pairing pairing, String aad, String blob) async {
     try {
       final box = SecretBox.fromConcatenation(
         base64Url.decode(base64Url.normalize(blob)),
@@ -32,7 +40,7 @@ class RemoteService {
       final clear = await _aes.decrypt(
         box,
         secretKey: _key(pairing),
-        aad: utf8.encode('bow-req:$id'),
+        aad: utf8.encode(aad),
       );
       return jsonDecode(utf8.decode(clear));
     } catch (_) {

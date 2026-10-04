@@ -17,18 +17,21 @@ class MarkdownText extends StatelessWidget {
     final c = Bow.of(context);
     final body = TextStyle(color: c.ink, fontSize: 14, height: 1.4);
     final bold = body.copyWith(fontWeight: FontWeight.w700);
-    final mono = body.copyWith(
+    final monoPlain = body.copyWith(
       fontSize: 12.5,
       fontFamily: 'monospace',
       fontFamilyFallback: const ['Menlo', 'Courier'],
-      backgroundColor: c.well,
     );
+    // Code trong dòng có nền riêng để tách khỏi chữ thường; KHỐI code thì không — cả khối đã nằm trong một ô nền,
+    // tô thêm nền cho từng dòng là hai lớp chồng nhau.
+    final mono = monoPlain.copyWith(backgroundColor: c.well);
     return MarkdownBody(
       data: prepareMarkdown(data),
       selectable: true,
       // Xuống dòng trong một đoạn là xuống dòng thật: lời agent hay dùng nó để tách ý.
       softLineBreak: true,
       extensionSet: md.ExtensionSet.gitHubFlavored,
+      syntaxHighlighter: _PlainCode(monoPlain),
       styleSheet: MarkdownStyleSheet(
         p: body,
         strong: bold,
@@ -68,4 +71,14 @@ class MarkdownText extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Chữ của khối code: chữ đều nét, không tô màu cú pháp, không nền riêng (xem `MarkdownText.build`).
+class _PlainCode extends SyntaxHighlighter {
+  _PlainCode(this.style);
+
+  final TextStyle style;
+
+  @override
+  TextSpan format(String source) => TextSpan(text: source, style: style);
 }

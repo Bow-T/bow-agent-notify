@@ -1,3 +1,4 @@
+import 'package:bow_notify/src/models/mirror.dart';
 import 'package:bow_notify/src/models/pairing.dart';
 import 'package:bow_notify/src/models/pending_card.dart';
 import 'package:bow_notify/src/services/remote_service.dart';
@@ -99,6 +100,56 @@ void main() {
         'develop',
         'main',
       ]);
+    },
+  );
+
+  // Bản mã của nhánh "tab trên máy", do CHÍNH code server sinh (`seal(key, 'mirror', …)` ở bow-agent) với cùng khoá test.
+  const mirrorItem =
+      'sC154R8Sh0VBLWushGvXtZ27gbFI9PGmDcpwzdE9VP3a15_4sIukF4fOQJt9Gwwo_hn9-EMtLAO_LN9JxiVLgeOKZ5cNCgdLIZZr_6mcmLj8eTz9-IWU6iRlZMXmCXF2Q9DZiHACMSx6VWe3W9ztjbOfJ1SU0YZm62Q6fjI9pHJ2dXki8TcCg6mQWH66achORdK08YreWnF0FA';
+  const mirrorTabs =
+      'odclsIxJf5ker2BeZgh7P_a75CQtRcvHMF5FA7hNtio2A32Yt1NtqH7mijfmT8XkK8DLBXiKISqKhnzwwBcW03QS_T_pE4VWblUOnT4nBm84kndaw90tdGePfMJix5EH7N80m_y7CXKFOAQMyzdWSCeu3KHbuHw6a7nS6FnhthUdc7DcYMQJN9bPhDAFzic6Kte0V20bbBKTHhDAJuHf64bq7rquzsvexXNTNjc';
+
+  test(
+    'mở được dòng chat + danh sách tab do server mã hoá cho "tab trên máy"',
+    () async {
+      final item = MirrorItem.fromJson(
+        await remote.openMirror(pairing, 't1/1700000000000-3', mirrorItem),
+      )!;
+      expect(item.kind, 'agent');
+      expect(item.text, 'Đã sửa **xong** lỗi đếm.');
+      expect(item.sub, 'soi lỗi');
+      expect(item.order, 12);
+      expect(item.at!.millisecondsSinceEpoch, 1700000000000);
+
+      final tabs = MachineTabs.fromJson(
+        pairing,
+        '4000',
+        await remote.openMirror(pairing, 'tabs', mirrorTabs),
+      )!;
+      expect(tabs.active, 't1');
+      final tab = tabs.tabs.single;
+      expect(
+        (tab.title, tab.project, tab.running, tab.pending),
+        ('DULB-46 đếm số món', 'labuse-delivery', true, 1),
+      );
+    },
+  );
+
+  test(
+    'dòng của tab này không mở được dưới tên tab khác; bản mã "tab trên máy" không mở ra thành thẻ duyệt',
+    () async {
+      expect(
+        await remote.openMirror(pairing, 't2/1700000000000-3', mirrorItem),
+        isNull,
+      );
+      expect(
+        await remote.openCard(pairing, 't1/1700000000000-3', mirrorItem),
+        isNull,
+      );
+      expect(
+        await remote.openMirror(pairing, 'card-1', fromServer),
+        isNull,
+      ); // và ngược lại
     },
   );
 }

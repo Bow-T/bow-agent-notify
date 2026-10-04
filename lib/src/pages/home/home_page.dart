@@ -11,6 +11,9 @@ import '../../models/pending_card.dart';
 import '../../utils/l10n.dart';
 import '../scan/scan_page.dart';
 import 'home_vm.dart';
+import '../tabs/tab_page.dart';
+import '../tabs/tabs_vm.dart';
+import 'widgets/machine_tabs_section.dart';
 import 'widgets/machine_tile.dart';
 import 'widgets/pending_card_view.dart';
 import 'widgets/pin_widget_tile.dart';
@@ -43,8 +46,16 @@ class _HomePageState extends ConsumerState<HomePage>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) =>
-      state == AppLifecycleState.resumed ? _vm.resumed() : _vm.paused();
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final tabs = ref.read(tabsVmProvider.notifier);
+    if (state == AppLifecycleState.resumed) {
+      _vm.resumed();
+      tabs.resumed();
+    } else {
+      _vm.paused();
+      tabs.paused();
+    }
+  }
 
   /// Hiện câu ViewModel trả về (`null` = không có gì để nói).
   void _say(String? text) {
@@ -147,6 +158,11 @@ class _HomePageState extends ConsumerState<HomePage>
   Widget build(BuildContext context) {
     final state = ref.watch(homeVmProvider);
     final paired = state.pairings.isNotEmpty;
+    // Thanh tab của các trang bow đang mở trên máy (chỉ xem) — rỗng khi máy chưa bật tính năng đó.
+    final machines = [
+      for (final machine in ref.watch(tabsVmProvider))
+        if (machine.tabs.isNotEmpty) machine,
+    ];
     return BowScaffold(
       action: IconButton(
         onPressed: state.busy ? null : _enterCode,
@@ -193,6 +209,22 @@ class _HomePageState extends ConsumerState<HomePage>
               ),
             ),
         ],
+        for (final machine in machines)
+          MachineTabsSection(
+            machine: machine,
+            showHost: machines.length > 1,
+            onOpen: (tab) => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => TabPage(
+                  tab: (
+                    topic: machine.pairing.topic,
+                    port: machine.port,
+                    tabId: tab.id,
+                  ),
+                ),
+              ),
+            ),
+          ),
         if (paired) ...[
           SectionTitle(t('Máy đã ghép', 'Paired machines')),
           for (final pairing in state.pairings)
