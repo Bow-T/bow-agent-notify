@@ -11,6 +11,7 @@ import '../models/card_ref.dart';
 import '../models/pairing.dart';
 import '../models/pending_card.dart';
 import '../utils/l10n.dart';
+import '../utils/markdown.dart';
 import 'pairing_store.dart';
 import 'remote_service.dart';
 
@@ -22,6 +23,9 @@ const _channels = {
   'bow_done': 'Bow · đã xong',
   'bow_fail': 'Bow · lượt chạy lỗi',
 };
+
+/// Phần cuối lời agent đưa lên thông báo mở rộng (ký tự) — vừa khoảng mười dòng.
+const _noteTailChars = 360;
 
 const _shownKey = 'shownCards';
 const _shownMaxAge = Duration(hours: 24);
@@ -82,6 +86,7 @@ class NotificationService {
     String channel, {
     required String tag,
     String? bigText,
+    bool bigTextIsHtml = false,
     String? subText,
     List<CardAction> actions = const [],
     bool alert = true,
@@ -98,7 +103,9 @@ class NotificationService {
     onlyAlertOnce: !alert,
     // Màn hình khoá: không hiện lệnh, không hiện nút — phải mở khoá mới thấy / mới duyệt được.
     visibility: NotificationVisibility.private,
-    styleInformation: bigText == null ? null : BigTextStyleInformation(bigText),
+    styleInformation: bigText == null
+        ? null
+        : BigTextStyleInformation(bigText, htmlFormatBigText: bigTextIsHtml),
     actions: [
       for (final a in actions)
         AndroidNotificationAction(
@@ -116,16 +123,22 @@ class NotificationService {
     required bool alert,
   }) async {
     await _remember(tag, card.id);
+    // Thẻ trả lời mang LỜI AGENT (Markdown): thông báo hiện đậm / code / gạch đầu dòng thay vì nguyên ký hiệu. Thẻ
+    // duyệt mang LỆNH — giữ nguyên từng ký tự.
+    final prose = card.kind == 'reply';
+    // Thông báo chỉ hiện được chừng mười dòng (thu gọn: một dòng) — lấy phần CUỐI, nơi agent mời trả lời.
+    final tail = prose ? markdownTail(card.text, _noteTailChars) : '';
     await _plugin.show(
       id: 0,
       title: card.label.isEmpty ? t('Tác vụ', 'Task') : card.label,
-      body: card.text,
+      body: prose ? markdownToPlain(tail).split('\n').last : card.text,
       notificationDetails: NotificationDetails(
         android: _details(
           // Lời mời trả lời đi cùng thông báo "đã xong" — giữ kênh (và âm) của nó.
           card.kind == 'reply' ? 'bow_done' : 'bow_ask',
           tag: tag,
-          bigText: card.text,
+          bigText: prose ? markdownToAndroidHtml(tail) : card.text,
+          bigTextIsHtml: prose,
           subText: [
             if (card.risky) t('RỦI RO', 'RISKY'),
             card.pairing.host,

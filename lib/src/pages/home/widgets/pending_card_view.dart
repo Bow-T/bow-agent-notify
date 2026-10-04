@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../components/glass.dart';
 import '../../../components/glass_button.dart';
 import '../../../components/icon3d.dart';
+import '../../../components/markdown_text.dart';
 import '../../../models/pending_card.dart';
 import '../../../themes/bow_theme.dart';
 import '../../../utils/l10n.dart';
@@ -114,10 +115,11 @@ class _PendingCardViewState extends State<PendingCardView> {
           ),
           const SizedBox(height: 10),
           if (!isQuestion)
-            // Lệnh / file cần duyệt: chữ đều nét trong ô lõm, cuộn được khi dài.
+            // Ô lõm chứa thứ cần xem: lệnh / file cần duyệt, hoặc lời agent của lượt vừa xong. Cuộn được khi dài.
             Container(
               width: double.infinity,
-              constraints: const BoxConstraints(maxHeight: 190),
+              // Lời agent dài hơn một lệnh: cho ô cao hơn (vẫn cuộn được).
+              constraints: BoxConstraints(maxHeight: isReply ? 280 : 190),
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: c.well,
@@ -125,19 +127,22 @@ class _PendingCardViewState extends State<PendingCardView> {
                 border: Border.all(color: c.hairline),
               ),
               child: SingleChildScrollView(
-                child: SelectableText(
-                  card.text,
-                  style: TextStyle(
-                    color: c.ink,
-                    fontSize: isReply ? 14 : 13,
-                    height: 1.4,
-                    // Lệnh thì chữ đều nét; lời agent (thẻ trả lời) là văn xuôi.
-                    fontFamily: isReply ? null : 'monospace',
-                    fontFamilyFallback: isReply
-                        ? null
-                        : const ['Menlo', 'Courier'],
-                  ),
-                ),
+                // Lời agent: mở ra ở CUỐI (nơi agent mời trả lời), cuộn lên để đọc phần trước.
+                reverse: isReply,
+                child: isReply
+                    // Lời agent là Markdown (đậm, danh sách, code…) — dựng cho đúng, không hiện nguyên ký hiệu.
+                    ? MarkdownText(card.text)
+                    // Lệnh / file cần duyệt: giữ NGUYÊN từng ký tự, chữ đều nét (dấu * hay _ trong lệnh là nội dung).
+                    : SelectableText(
+                        card.text,
+                        style: TextStyle(
+                          color: c.ink,
+                          fontSize: 13,
+                          height: 1.4,
+                          fontFamily: 'monospace',
+                          fontFamilyFallback: const ['Menlo', 'Courier'],
+                        ),
+                      ),
               ),
             )
           else

@@ -7,6 +7,7 @@ import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
+import android.text.Html
 import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetBackgroundIntent
@@ -96,14 +97,23 @@ class PendingWidgetProvider : HomeWidgetProvider() {
         views.setImageViewResource(R.id.kind_icon, BowWidget.icon(BowWidget.text(data, "w_kind")))
         views.setTextViewText(R.id.label, BowWidget.text(data, "w_label"))
         views.setViewVisibility(R.id.risky, if (BowWidget.on(data, "w_risky")) View.VISIBLE else View.GONE)
-        views.setTextViewText(R.id.text, BowWidget.text(data, "w_text"))
+        // Lệnh → ô chữ đều nét, nguyên từng ký tự. Lời agent (thẻ trả lời) → ô văn xuôi, dựng từ HTML rút gọn do Dart đổi
+        // từ Markdown (đậm, nghiêng, code, gạch đầu dòng).
+        val html = BowWidget.text(data, "w_html")
+        val body = if (html.isEmpty()) R.id.text else R.id.prose
+        views.setViewVisibility(R.id.text, if (html.isEmpty()) View.VISIBLE else View.GONE)
+        views.setViewVisibility(R.id.prose, if (html.isEmpty()) View.GONE else View.VISIBLE)
+        views.setTextViewText(
+            body,
+            if (html.isEmpty()) BowWidget.text(data, "w_text") else Html.fromHtml(html, Html.FROM_HTML_MODE_COMPACT),
+        )
         // Ô lệnh chiếm phần còn lại của widget: hiện vừa đủ số dòng lọt trong đó (mỗi dòng ~16 dp; phần cố định — đầu
         // widget, tên tác vụ, hàng nút, lề — ~136 dp). Launcher báo chiều cao theo cặp min / max: màn DỌC dùng max.
         val portrait = context.resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE
         val height = options
             ?.getInt(if (portrait) AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT else AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
             ?.takeIf { it > 0 } ?: 150
-        views.setInt(R.id.text, "setMaxLines", ((height - 136) / 16).coerceIn(1, 12))
+        views.setInt(body, "setMaxLines", ((height - 136) / 16).coerceIn(1, 12))
 
         val busy = BowWidget.on(data, "w_busy")
         views.setViewVisibility(R.id.actions, if (busy) View.GONE else View.VISIBLE)
