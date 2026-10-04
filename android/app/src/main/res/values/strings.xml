@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_pending_name">Waiting for you</string>
+    <string name="widget_pending_desc">The command your agent is waiting on — allow, deny or reply right from the home screen.</string>
+    <string name="widget_status_name">Bow status</string>
+    <string name="widget_status_desc">How many things are waiting for you.</string>
+    <string name="widget_setup_title">Open Bow Notify</string>
+    <string name="widget_setup_sub">Pair a machine to see what is waiting.</string>
+    <string name="widget_sending">Sending…</string>
+    <string name="widget_risky">RISKY</string>
+    <string name="widget_refresh">Refresh</string>
+    <string name="widget_preview_label">DULB-46 · items count</string>
+    <string name="widget_preview_text">git push origin fix/DULB-46-items-count</string>
+    <string name="widget_preview_allow">Allow</string>
+    <string name="widget_preview_deny">Deny</string>
+    <string name="widget_preview_badge">1 waiting</string>
+    <string name="widget_preview_status">1 waiting</string>
+    <string name="widget_preview_status_sub">Bow-Mac</string>
+</resources>

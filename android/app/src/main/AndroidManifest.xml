@@ -26,11 +26,43 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Chạm vào widget màn hình chính để mở app. -->
+            <intent-filter>
+                <action android:name="es.antonborri.home_widget.action.LAUNCH" />
+            </intent-filter>
         </activity>
         <!-- Nút Cho phép / Từ chối trên thông báo: gói flutter_local_notifications nhận cú bấm qua receiver này rồi gọi
              về Dart (notifications.dart) — kể cả khi app đã tắt. -->
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
+            android:exported="false" />
+        <!-- Widget màn hình chính (BowWidgets.kt). -->
+        <receiver
+            android:name=".PendingWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_pending_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_pending_info" />
+        </receiver>
+        <receiver
+            android:name=".StatusWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_status_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_status_info" />
+        </receiver>
+        <!-- Cú chạm vào nút của widget → Dart (isolate nền). KHÔNG exported: chỉ PendingIntent do chính app tạo mới tới
+             được đây — app khác không gửi được "cho phép" giả vào receiver này. -->
+        <receiver
+            android:name="es.antonborri.home_widget.HomeWidgetBackgroundReceiver"
             android:exported="false" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

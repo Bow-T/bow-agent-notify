@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="bow_launch">#0A0C1E</color>
+    <!-- Widget màn hình chính (bản tối). -->
+    <color name="widget_surface">#E61B1E32</color>
+    <color name="widget_rim">#29FFFFFF</color>
+    <color name="widget_ink">#F6F8FF</color>
+    <color name="widget_muted">#A9B1CA</color>
+    <color name="widget_well">#42000000</color>
+    <color name="widget_plain">#24FFFFFF</color>
+    <color name="widget_danger">#FF453A</color>
+    <color name="widget_on_accent">#FFFFFF</color>
 </resources>
