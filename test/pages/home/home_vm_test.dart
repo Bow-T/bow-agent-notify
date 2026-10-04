@@ -4,7 +4,9 @@ import 'dart:convert';
 import 'package:bow_notify/src/models/pairing.dart';
 import 'package:bow_notify/src/models/pending_card.dart';
 import 'package:bow_notify/src/pages/home/home_vm.dart';
+import 'package:bow_notify/src/models/received.dart';
 import 'package:bow_notify/src/services/biometric_service.dart';
+import 'package:bow_notify/src/services/home_widget_service.dart';
 import 'package:bow_notify/src/services/notification_service.dart';
 import 'package:bow_notify/src/services/pairing_store.dart';
 import 'package:bow_notify/src/services/push_service.dart';
@@ -120,9 +122,38 @@ class FakeNotifications implements NotificationService {
   }
 
   @override
-  Future<void> init() async {}
+  Future<void> init({
+    required void Function(NotificationResponse response) onBackgroundResponse,
+  }) async {}
   @override
-  Future<void> handleResponse(NotificationResponse response) async {}
+  Future<String?> handleResponse(NotificationResponse response) async => null;
+}
+
+class FakeWidget implements HomeWidgetService {
+  /// Mỗi lần vẽ lại: mã các thẻ + số máy.
+  final shown = <(List<String>, int)>[];
+  final events = <Received>[];
+  bool pinnable = true;
+  final pinned = <bool>[];
+
+  @override
+  Future<void> show(
+    List<PendingCard> cards,
+    int machines, {
+    bool busy = false,
+  }) async => shown.add(([for (final card in cards) card.id], machines));
+  @override
+  Future<void> noteEvent(Received event) async => events.add(event);
+  @override
+  Future<bool> canPin() async => pinnable;
+  @override
+  Future<void> pin({bool status = false}) async => pinned.add(status);
+  @override
+  Future<void> init(Future<void> Function(Uri? uri) onTap) async {}
+  @override
+  Future<void> sync({Set<String> exclude = const {}}) async {}
+  @override
+  Future<void> handle(Uri? uri) async {}
 }
 
 String _uri(String topicChar, {bool key = true, String project = 'p1'}) =>
@@ -150,6 +181,7 @@ typedef Harness = ({
   FakeRemote remote,
   FakeBiometric biometric,
   FakeNotifications notifications,
+  FakeWidget widget,
 });
 
 /// Dựng ViewModel với các service giả và chờ nó khởi động xong (đọc máy đã ghép, xin quyền, đọc thẻ lần đầu).
@@ -159,6 +191,7 @@ Future<Harness> _start({List<Pairing> saved = const []}) async {
   final remote = FakeRemote();
   final biometric = FakeBiometric();
   final notifications = FakeNotifications();
+  final widget = FakeWidget();
   final container = ProviderContainer(
     overrides: [
       pushServiceProvider.overrideWithValue(push),
@@ -166,6 +199,7 @@ Future<Harness> _start({List<Pairing> saved = const []}) async {
       remoteServiceProvider.overrideWithValue(remote),
       biometricServiceProvider.overrideWithValue(biometric),
       notificationServiceProvider.overrideWithValue(notifications),
+      homeWidgetServiceProvider.overrideWithValue(widget),
     ],
   );
   addTearDown(container.dispose);
@@ -181,6 +215,7 @@ Future<Harness> _start({List<Pairing> saved = const []}) async {
     remote: remote,
     biometric: biometric,
     notifications: notifications,
+    widget: widget,
   );
 }
 
@@ -293,6 +328,9 @@ void main() {
           ['c1', 'c2'],
         );
         expect(h.notifications.dismissed.last, {'c1', 'c2'});
+        // Widget màn hình chính vẽ lại theo đúng danh sách vừa đọc.
+        expect(h.widget.shown.last.$1, ['c1', 'c2']);
+        expect(h.widget.shown.last.$2, 3);
       },
     );
 
@@ -305,12 +343,14 @@ void main() {
         h.remote.cards[a.topic] = [_card(a, 'c1')];
         h.remote.down.add(b.topic);
         h.notifications.dismissed.clear();
+        h.widget.shown.clear();
         await h.vm.refreshPending();
         expect(
           [for (final c in h.container.read(homeVmProvider).pending) c.id],
           ['c1'],
         );
         expect(h.notifications.dismissed, isEmpty);
+        expect(h.widget.shown, isEmpty); // widget giữ nguyên thứ đang hiện
       },
     );
 
@@ -434,6 +474,19 @@ void main() {
         [('done', 'Bow · đã xong'), ('approval', 'Bow · chờ duyệt')],
       );
       expect(h.notifications.shown.length, 2);
+      // Widget nhớ "việc gần nhất".
+      expect([for (final e in h.widget.events) e.kind], ['approval', 'done']);
+    },
+  );
+
+  test(
+    'widget: đọc được launcher có cho ghim không, và ghim khi người dùng bấm',
+    () async {
+      final h = await _start();
+      expect(h.container.read(homeVmProvider).canPinWidget, isTrue);
+      await h.vm.pinWidget();
+      await h.vm.pinWidget(status: true);
+      expect(h.widget.pinned, [false, true]);
     },
   );
 }

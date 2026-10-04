@@ -11,6 +11,12 @@ for name in agent shield chat success error bolt warning trash clipboard camera 
   rsvg-convert -w 144 -h 144 "tool/icons/$name.svg" -o "assets/icons/$name.png"
 done
 
+# Widget màn hình chính của Android không đọc được asset của Flutter ⇒ chép các hình nó dùng vào res/ (tiền tố w_).
+mkdir -p android/app/src/main/res/drawable-nodpi
+for name in logo_mark shield chat success error agent warning; do
+  cp "assets/icons/$name.png" "android/app/src/main/res/drawable-nodpi/w_$name.png"
+done
+
 # iOS: icon app. Qua BMP để BỎ kênh alpha — App Store từ chối icon có alpha.
 rsvg-convert -w 1024 -h 1024 tool/icons/logo.svg -o "$tmp/logo.png"
 sips -s format bmp "$tmp/logo.png" --out "$tmp/logo.bmp" >/dev/null

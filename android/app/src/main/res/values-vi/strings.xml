@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_pending_name">Chờ bạn duyệt</string>
+    <string name="widget_pending_desc">Lệnh agent đang chờ bạn — cho phép, từ chối hoặc trả lời ngay trên màn hình chính.</string>
+    <string name="widget_status_name">Trạng thái Bow</string>
+    <string name="widget_status_desc">Đang có mấy việc chờ bạn.</string>
+    <string name="widget_setup_title">Mở Bow Notify</string>
+    <string name="widget_setup_sub">Ghép một máy để thấy việc đang chờ.</string>
+    <string name="widget_sending">Đang gửi…</string>
+    <string name="widget_risky">RỦI RO</string>
+    <string name="widget_refresh">Làm mới</string>
+    <string name="widget_preview_label">DULB-46 · đếm số món</string>
+    <string name="widget_preview_text">git push origin fix/DULB-46-items-count</string>
+    <string name="widget_preview_allow">Cho phép</string>
+    <string name="widget_preview_deny">Từ chối</string>
+    <string name="widget_preview_badge">1 chờ</string>
+    <string name="widget_preview_status">1 việc chờ bạn</string>
+    <string name="widget_preview_status_sub">Bow-Mac</string>
+</resources>

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
+import 'src/services/background.dart';
+import 'src/services/home_widget_service.dart';
 import 'src/services/notification_service.dart';
 
 /// Bow Notify — app đồng hành của bow-agent: nhận thông báo đẩy (FCM) và, khi máy chạy bow bật "duyệt từ điện thoại",
@@ -26,7 +28,13 @@ Future<void> main() async {
     await Firebase.initializeApp();
     // Thông báo tới lúc app đang nền / đã tắt: nâng nó thành bản có nút duyệt.
     FirebaseMessaging.onBackgroundMessage(pushInBackground);
-    await container.read(notificationServiceProvider).init();
+    await container
+        .read(notificationServiceProvider)
+        .init(onBackgroundResponse: notificationActionInBackground);
+    // Widget màn hình chính: cú chạm vào nút của nó cũng chạy nền.
+    await container
+        .read(homeWidgetServiceProvider)
+        .init(widgetTappedInBackground);
   } catch (e) {
     firebaseError = '$e';
   }

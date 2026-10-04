@@ -94,6 +94,26 @@ Không cần mở app: thông báo hiện luôn lệnh cần duyệt kèm nút (
 - Máy không cho app chạy nền (tiết kiệm pin gắt) thì vẫn có thông báo thường như trước, bấm vào là mở app.
 - Cần bow-agent bản có gửi mã thẻ; bản cũ hơn thì thông báo như trước, không có nút. iOS chưa có nút trên thông báo.
 
+### Widget màn hình chính (Android)
+
+Hai widget, thêm từ bảng chọn widget của máy hoặc bấm **Thêm thẻ chờ duyệt** / **Thêm viên trạng thái** ngay trong app:
+
+- **Chờ bạn duyệt** (4×2, kéo giãn được): thẻ đang chờ — tên tác vụ, lệnh, và nút y như trên thông báo (Cho phép / Từ
+  chối, các câu trả lời, các lựa chọn của câu hỏi ngắn). Thao tác rủi ro chỉ có **Mở để duyệt** — cho phép nó phải qua vân
+  tay trong app. Không có gì chờ thì hiện lượt vừa xong / lỗi gần nhất. Kéo widget cao lên là thấy thêm dòng của lệnh.
+- **Trạng thái** (viên thuốc 2×1): đang có mấy việc chờ. Chạm là mở app.
+
+Thẻ đang CHẶN agent (xin duyệt, câu hỏi) được đưa lên trước lời mời trả lời. Widget theo chế độ sáng / tối của máy.
+
+Widget không tự hỏi mạng theo nhịp (hệ điều hành không cho) — nó được làm mới khi: có thông báo đẩy tới, bạn vừa quyết
+định (ở đâu cũng vậy), app đang mở, bạn bấm ↻, và mỗi 30 phút. Vì thế một thẻ đã được bấm ở web mà không có thông báo
+nào theo sau có thể nằm lại trên widget tới lần làm mới kế; bấm nút của nó thì không gửi gì, widget tự vẽ lại.
+
+Phần vẽ ở Kotlin (`android/…/BowWidgets.kt`, chỉ đọc dữ liệu rồi gán vào view); chữ nào hiện, nút nào có đều quyết ở
+Dart (`lib/src/models/widget_snapshot.dart` → `lib/src/services/home_widget_service.dart`). Cú chạm vào nút chạy về
+Dart ở isolate nền, đọc lại thẻ thật từ bản mã của server rồi mới gửi — cùng luật với nút trên thông báo. Receiver nhận
+cú chạm KHÔNG exported: app khác không gửi được "cho phép" giả vào. iOS chưa có widget.
+
 Nó hoạt động thế nào (`lib/src/services/remote_service.dart`, nửa server ở `src/core/remoteApproval.ts` của bow-agent):
 
 - Máy chạy bow ghi thẻ lên Realtime Database, app đọc (mỗi 4 giây khi app đang mở, và ngay khi có thông báo tới);
@@ -147,6 +167,7 @@ Nó hoạt động thế nào (`lib/src/services/remote_service.dart`, nửa ser
 | Thẻ không hiện ở "Chờ bạn duyệt" | Máy đó chưa bật *Duyệt từ điện thoại* (dòng máy đã ghép không ghi "duyệt được từ đây") → bật trên web rồi quét lại mã. Thẻ chỉ lên sau khi treo 1,5 giây. |
 | Thông báo không có nút duyệt | Cần app từ 1.4 + bow-agent bản gửi mã thẻ + máy đã ghép ghi "duyệt được từ đây". Máy chặn app chạy nền (tiết kiệm pin) thì chỉ có thông báo thường — cho app vào danh sách không tối ưu pin. |
 | Thông báo "đã xong" không có nút trả lời | Cần app từ 1.5 + bow-agent bản có lời mời trả lời. Lượt ngắn hơn 60 giây không báo (trừ khi bạn vừa thao tác từ điện thoại); ô nhập trên máy đang có bản nháp thì không mời; trang bow đã đóng thì không ai gửi được câu trả lời. |
+| Widget không cập nhật | Widget chỉ làm mới khi có thông báo tới, sau một quyết định, khi app mở, khi bấm ↻, hoặc mỗi 30 phút. Máy chặn app chạy nền (tiết kiệm pin) thì thông báo không gọi dậy được app — cho app vào danh sách không tối ưu pin. |
 | Bấm Cho phép báo "Không gửi được" | Thẻ đã có trả lời (mỗi thẻ ghi một lần), hoặc bow không còn chạy / trang bow đã đóng. |
 | App mở lên báo "Chưa có cấu hình Firebase" | Thiếu `google-services.json` / `GoogleService-Info.plist` trong bản build. |
 
@@ -196,11 +217,14 @@ lib/
       pending_card.dart           thẻ chờ duyệt / câu hỏi / lời mời trả lời
       card_action.dart            nút của một thẻ + quyết định ứng với từng nút
       card_ref.dart               thứ gắn theo thông báo, sổ thông báo có nút đang hiện
+      widget_snapshot.dart        mọi thứ widget màn hình chính cần để vẽ
       received.dart               thông báo vừa nhận
     services/                   nói chuyện với bên ngoài — mỗi service một provider
       push_service.dart           FCM: quyền, tin tới, đăng ký topic
       remote_service.dart         Realtime Database + mã hoá thẻ / quyết định
-      notification_service.dart   thông báo có nút, cả phần chạy nền
+      notification_service.dart   thông báo có nút
+      home_widget_service.dart    dữ liệu của widget màn hình chính + cú chạm vào nút của nó
+      background.dart             các điểm vào chạy nền (thông báo đẩy, nút trên thông báo, nút trên widget)
       pairing_store.dart          lưu máy đã ghép
       biometric_service.dart      vân tay / khuôn mặt / mật mã máy
     pages/
@@ -216,7 +240,7 @@ lib/
   cần `BuildContext` — hộp thoại, chuyển màn, thanh báo (ViewModel trả về câu cần nói).
 - **ViewModel không biết Firebase / mạng**: nó chỉ gọi service qua provider ⇒ test thay service bằng bản giả
   (`test/pages/home/home_vm_test.dart`) — không cần Firebase, không cần widget.
-- **Phần chạy nền** (thông báo tới lúc app đã tắt, nút trên thông báo) là isolate riêng, không có cây widget: nó tự dựng
-  một `ProviderContainer` để lấy đúng các service đó.
+- **Phần chạy nền** (thông báo tới lúc app đã tắt, nút trên thông báo, nút trên widget màn hình chính) là isolate riêng,
+  không có cây widget: nó tự dựng một `ProviderContainer` để lấy đúng các service đó (`services/background.dart`).
 - Thêm màn mới: `pages/<màn>/<màn>_page.dart` + `<màn>_vm.dart`; thêm nguồn dữ liệu mới: một class trong `services/` kèm
   provider của nó.

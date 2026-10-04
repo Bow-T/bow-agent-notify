@@ -8,6 +8,7 @@ import '../../models/pairing.dart';
 import '../../models/pending_card.dart';
 import '../../models/received.dart';
 import '../../services/biometric_service.dart';
+import '../../services/home_widget_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/pairing_store.dart';
 import '../../services/push_service.dart';
@@ -24,6 +25,7 @@ class HomeState {
     this.recent = const [],
     this.notifyDenied = false,
     this.busy = false,
+    this.canPinWidget = false,
   });
 
   final List<Pairing> pairings;
@@ -43,6 +45,9 @@ class HomeState {
   /// Đang ghép một máy (khoá nút quét / dán mã).
   final bool busy;
 
+  /// Launcher của máy cho app tự đề nghị ghim widget ra màn hình chính.
+  final bool canPinWidget;
+
   HomeState copyWith({
     List<Pairing>? pairings,
     List<PendingCard>? pending,
@@ -50,6 +55,7 @@ class HomeState {
     List<Received>? recent,
     bool? notifyDenied,
     bool? busy,
+    bool? canPinWidget,
   }) => HomeState(
     pairings: pairings ?? this.pairings,
     pending: pending ?? this.pending,
@@ -57,6 +63,7 @@ class HomeState {
     recent: recent ?? this.recent,
     notifyDenied: notifyDenied ?? this.notifyDenied,
     busy: busy ?? this.busy,
+    canPinWidget: canPinWidget ?? this.canPinWidget,
   );
 }
 
@@ -76,6 +83,7 @@ class HomeVm extends Notifier<HomeState> {
   PairingStore get _store => ref.read(pairingStoreProvider);
   NotificationService get _notifications =>
       ref.read(notificationServiceProvider);
+  HomeWidgetService get _widget => ref.read(homeWidgetServiceProvider);
 
   @override
   HomeState build() {
@@ -103,10 +111,19 @@ class HomeVm extends Notifier<HomeState> {
   Future<void> _start() async {
     final saved = await _store.load();
     final denied = await _push.requestPermission();
+    final canPin = await _widget.canPin();
     if (!ref.mounted) return;
-    state = state.copyWith(pairings: saved, notifyDenied: denied);
+    state = state.copyWith(
+      pairings: saved,
+      notifyDenied: denied,
+      canPinWidget: canPin,
+    );
     _watchPending();
   }
+
+  /// Đề nghị ghim một widget ra màn hình chính (launcher hiện hộp xác nhận của nó): thẻ "Chờ bạn duyệt", hoặc viên
+  /// thuốc "Trạng thái".
+  Future<void> pinWidget({bool status = false}) => _widget.pin(status: status);
 
   /// App trở lại trước mặt: đọc thẻ chờ ngay và hỏi lại theo nhịp.
   void resumed() => _watchPending();
@@ -152,14 +169,15 @@ class HomeVm extends Notifier<HomeState> {
     )) {
       state = state.copyWith(pending: cards);
     }
-    // Thẻ đã xử lý (vừa bấm trong app, hoặc ở web) thì gỡ luôn thông báo có nút của nó. Chỉ khi đọc được MỌI máy —
-    // đọc hụt một máy mà gỡ là mất thông báo của thẻ còn đang chờ.
+    // Thẻ đã xử lý (vừa bấm trong app, hoặc ở web) thì gỡ luôn thông báo có nút của nó, và widget màn hình chính vẽ
+    // lại theo danh sách vừa đọc. Chỉ khi đọc được MỌI máy — đọc hụt một máy mà gỡ là mất thẻ còn đang chờ.
     if (complete) {
       unawaited(
         _notifications.dismissHandledCards({
           for (final card in cards) card.id,
         }, asOf),
       );
+      unawaited(_widget.show(cards, state.pairings.length));
     }
   }
 
@@ -225,17 +243,14 @@ class HomeVm extends Notifier<HomeState> {
     if (note == null) return;
     unawaited(refreshPending());
     unawaited(_notifications.handlePush(message, foreground: true));
-    state = state.copyWith(
-      recent: [
-        (
-          kind: message.data['kind'] as String? ?? '',
-          title: note.title ?? '',
-          body: note.body ?? '',
-          at: DateTime.now(),
-        ),
-        ...state.recent,
-      ],
+    final Received event = (
+      kind: message.data['kind'] as String? ?? '',
+      title: note.title ?? '',
+      body: note.body ?? '',
+      at: DateTime.now(),
     );
+    unawaited(_widget.noteEvent(event));
+    state = state.copyWith(recent: [event, ...state.recent]);
   }
 
   /// Ghép với máy trong mã: kiểm dự án Firebase khớp với app, đăng ký topic, rồi mới lưu.

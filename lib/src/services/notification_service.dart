@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -205,14 +204,15 @@ class NotificationService {
     );
   }
 
-  /// Người dùng bấm vào thông báo hoặc một nút của nó.
-  Future<void> handleResponse(NotificationResponse response) async {
+  /// Người dùng bấm vào thông báo hoặc một nút của nó. Trả mã thẻ VỪA TRẢ LỜI (để nơi khác — widget màn hình chính —
+  /// ẩn nó ngay, không chờ máy chạy bow gỡ); `null` = không gửi quyết định nào.
+  Future<String?> handleResponse(NotificationResponse response) async {
     final ref = decodeRef(response.payload);
     final actionId = response.actionId;
     if (ref == null || actionId == null || actionId == 'open') {
-      opened
-          .value++; // bấm vào thân thông báo / nút "Mở": app mở lên, màn chính đọc lại thẻ chờ
-      return;
+      // Bấm vào thân thông báo / nút "Mở": app mở lên, màn chính đọc lại thẻ chờ.
+      opened.value++;
+      return null;
     }
     Future<void> failed(String body) async {
       await _remember(ref.tag, null);
@@ -233,34 +233,39 @@ class NotificationService {
           : await _remote.fetchCard(approvers.first, ref.port, ref.id);
       final reply = card == null ? null : replyForAction(card, actionId);
       if (card == null || reply == null) {
-        return failed(
+        await failed(
           t(
             'Thẻ này không còn chờ nữa (đã được xử lý ở nơi khác).',
             'This card is no longer waiting (handled elsewhere).',
           ),
         );
+        return null;
       }
       await _remote.sendReply(card, reply);
       await _plugin.cancel(id: 0, tag: ref.tag);
       await _remember(ref.tag, null);
       opened.value++;
+      return card.id;
     } catch (e) {
       await failed(
         t('Mở app để thử lại. ($e)', 'Open the app to try again. ($e)'),
       );
+      return null;
     }
   }
 
-  /// Gọi một lần lúc app khởi động (và trong mỗi isolate nền trước khi dùng).
-  Future<void> init() async {
+  /// Gọi một lần lúc app khởi động (và trong mỗi isolate nền trước khi dùng). [onBackgroundResponse] = điểm vào chạy
+  /// nền cho nút bấm lúc app không mở (`background.dart`) — phải là hàm cấp cao nhất.
+  Future<void> init({
+    required void Function(NotificationResponse response) onBackgroundResponse,
+  }) async {
     if (!_android) return;
     await _plugin.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('ic_stat_bow'),
       ),
       onDidReceiveNotificationResponse: handleResponse,
-      onDidReceiveBackgroundNotificationResponse:
-          notificationActionInBackground,
+      onDidReceiveBackgroundNotificationResponse: onBackgroundResponse,
     );
   }
 }
@@ -271,31 +276,3 @@ final notificationServiceProvider = Provider<NotificationService>(
     ref.watch(pairingStoreProvider),
   ),
 );
-
-/// Phần chạy NỀN là một isolate riêng, không có cây widget ⇒ tự dựng một `ProviderContainer` để lấy service (cùng
-/// các provider với app), xong việc thì huỷ.
-Future<void> _inBackground(
-  Future<void> Function(NotificationService service) run,
-) async {
-  WidgetsFlutterBinding.ensureInitialized();
-  DartPluginRegistrant.ensureInitialized();
-  final container = ProviderContainer();
-  try {
-    await run(container.read(notificationServiceProvider));
-  } finally {
-    container.dispose();
-  }
-}
-
-/// Nút trên thông báo được bấm lúc app KHÔNG mở — chạy trong một isolate nền riêng.
-@pragma('vm:entry-point')
-Future<void> notificationActionInBackground(NotificationResponse response) =>
-    _inBackground((service) => service.handleResponse(response));
-
-/// Thông báo đẩy tới lúc app đang nền / đã tắt — cũng một isolate nền riêng (đăng ký ở `main`).
-@pragma('vm:entry-point')
-Future<void> pushInBackground(RemoteMessage message) =>
-    _inBackground((service) async {
-      await service.init();
-      await service.handlePush(message, foreground: false);
-    });

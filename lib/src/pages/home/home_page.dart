@@ -13,6 +13,7 @@ import '../scan/scan_page.dart';
 import 'home_vm.dart';
 import 'widgets/machine_tile.dart';
 import 'widgets/pending_card_view.dart';
+import 'widgets/pin_widget_tile.dart';
 import 'widgets/recent_list.dart';
 import 'widgets/status_card.dart';
 
@@ -202,6 +203,10 @@ class _HomePageState extends ConsumerState<HomePage>
                 onUnpair: () => _unpair(pairing),
               ),
             ),
+        ],
+        if (state.canPinWidget && paired) ...[
+          SectionTitle(t('Màn hình chính', 'Home screen')),
+          PinWidgetTile(onPin: (status) => _vm.pinWidget(status: status)),
         ],
         if (state.recent.isNotEmpty) ...[
           SectionTitle(t('Vừa nhận', 'Just received')),

@@ -4,4 +4,14 @@
     <color name="bow_accent">#007AFF</color>
     <!-- Nền lúc app đang mở lên: khớp nền của màn chính để không chớp trắng. -->
     <color name="bow_launch">#E6ECF6</color>
+    <!-- Widget màn hình chính (bản sáng) — cùng bảng màu với lib/src/themes/bow_theme.dart. Widget không làm mờ được thứ
+         phía sau như tấm kính trong app, nên nền là kính ĐỤC: trắng 90%. -->
+    <color name="widget_surface">#E6F6F8FC</color>
+    <color name="widget_rim">#CCFFFFFF</color>
+    <color name="widget_ink">#1D1D1F</color>
+    <color name="widget_muted">#6E6E73</color>
+    <color name="widget_well">#12000000</color>
+    <color name="widget_plain">#14000000</color>
+    <color name="widget_danger">#FF3B30</color>
+    <color name="widget_on_accent">#FFFFFF</color>
 </resources>
