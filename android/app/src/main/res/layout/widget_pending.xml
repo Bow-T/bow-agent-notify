@@ -129,6 +129,23 @@
             android:textColor="@color/widget_ink"
             android:textSize="12sp" />
 
+        <!-- Lời agent của lượt vừa xong (thẻ trả lời): văn xuôi, không phải chữ đều nét. Chỉ một trong hai ô hiện. -->
+        <TextView
+            android:id="@+id/prose"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_well"
+            android:ellipsize="end"
+            android:gravity="top"
+            android:maxLines="2"
+            android:paddingHorizontal="9dp"
+            android:paddingVertical="6dp"
+            android:textColor="@color/widget_ink"
+            android:textSize="12.5sp"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/actions"
             android:layout_width="match_parent"

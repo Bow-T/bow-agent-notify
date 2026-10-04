@@ -1,4 +1,5 @@
 import '../utils/l10n.dart';
+import '../utils/markdown.dart';
 import 'card_action.dart';
 import 'pending_card.dart';
 import 'received.dart';
@@ -7,6 +8,9 @@ import 'received.dart';
 /// view — chữ nào hiện, nút nào có, đều quyết ở đây. Đổi tên khoá thì đổi cả hai bên.
 ///
 /// Mọi giá trị là chuỗi (cờ = `'1'` / `''`): khỏi lệch kiểu giữa Dart và SharedPreferences của Android.
+
+/// Phần CUỐI lời agent đưa lên widget (ký tự): widget 4×2 hiện được 2–4 dòng, mà lời mời trả lời nằm ở cuối.
+const widgetTailChars = 170;
 
 /// Android hiện vừa ba nút trên một hàng của widget 4 ô.
 const widgetMaxActions = 3;
@@ -68,7 +72,16 @@ Map<String, String> widgetSnapshot({
     'w_kind': card?.kind ?? '',
     'w_label': label,
     'w_risky': card?.risky == true ? '1' : '',
-    'w_text': card?.text ?? '',
+    // Thẻ trả lời mang lời agent (Markdown): `w_html` là bản đã đổi cho widget dựng đậm / code / gạch đầu dòng, và
+    // `w_text` là bản chữ trơn. Thẻ duyệt mang LỆNH: `w_html` rỗng, `w_text` giữ nguyên từng ký tự (chữ đều nét).
+    'w_text': card == null
+        ? ''
+        : card.kind == 'reply'
+        ? markdownToPlain(markdownTail(card.text, widgetTailChars))
+        : card.text,
+    'w_html': card?.kind == 'reply'
+        ? markdownToAndroidHtml(markdownTail(card!.text, widgetTailChars))
+        : '',
     // Chỉ là mã định danh: nút bấm gửi nó về Dart, Dart đọc lại thẻ thật rồi mới gửi quyết định.
     'w_ref': card == null
         ? ''

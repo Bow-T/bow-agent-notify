@@ -163,4 +163,34 @@ void main() {
       ], everyElement(isFalse));
     },
   );
+
+  test(
+    'thẻ trả lời: lời agent (Markdown) đi kèm bản HTML cho widget dựng; thẻ duyệt giữ nguyên lệnh, không HTML',
+    () {
+      final reply = _snap([
+        _card('r', 5, {
+          'kind': 'reply',
+          'text': '- **DULB-50** xong\n- dấu `*` chờ designer',
+          'options': ['tiếp'],
+        }),
+      ]);
+      expect(
+        reply['w_html'],
+        '• <b>DULB-50</b> xong<br>• dấu <tt>*</tt> chờ designer',
+      );
+      expect(reply['w_text'], '• DULB-50 xong\n• dấu * chờ designer');
+
+      final approval = _snap([
+        _card('c', 5, {
+          'kind': 'approval',
+          'text': 'git add **/*.dart && echo `date`',
+        }),
+      ]);
+      expect(approval['w_html'], '');
+      expect(
+        approval['w_text'],
+        'git add **/*.dart && echo `date`',
+      ); // lệnh: không đụng một ký tự nào
+    },
+  );
 }

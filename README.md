@@ -74,7 +74,9 @@ từ đây", và khi agent chờ bạn, mục **Chờ bạn duyệt** hiện ở
 - Thẻ sửa file chỉ hiện đường dẫn + số dòng thay đổi — muốn soi nội dung thì về máy.
 - Thẻ **trả lời** (dấu tích xanh): lượt đã xong và bow mời vài câu gõ tiếp — "push", "tiếp", "commit/push", hoặc câu agent
   mời. Bấm một câu là tab trên máy gửi đúng câu đó, lượt mới chạy tiếp. Chỉ chọn được câu đang mời, không gõ tự do; không
-  chọn gì thì lượt cứ nằm đó như khi bạn rời bàn. Trang bow trên máy phải còn mở.
+  chọn gì thì lượt cứ nằm đó như khi bạn rời bàn. Trang bow trên máy phải còn mở. Lời agent là Markdown và được DỰNG
+  (đậm, danh sách, code, bảng) — trong thẻ, trên thông báo và trên widget; thẻ mở ra ở cuối đoạn, nơi agent mời trả lời.
+  Lệnh ở thẻ duyệt thì ngược lại: giữ nguyên từng ký tự, không dựng gì.
 
 ### Duyệt ngay trên thông báo (Android)
 
@@ -235,7 +237,8 @@ lib/
       home/widgets/               mảnh của màn chính
       scan/, setup/
     components/                 widget dùng chung (kính, nút, icon 3D, hộp thoại…)
-    themes/, utils/, constants/
+    themes/, constants/
+    utils/markdown.dart         lời agent (Markdown) → HTML rút gọn / chữ trơn cho thông báo và widget
 ```
 
 - **View không tự quyết gì**: nó đọc `ref.watch(homeVmProvider)` và gọi hàm của `HomeVm`. Thứ duy nhất View tự làm là việc
