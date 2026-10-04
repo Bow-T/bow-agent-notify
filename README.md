@@ -78,7 +78,7 @@ từ đây", và khi agent chờ bạn, mục **Chờ bạn duyệt** hiện ở
 
 ### Duyệt ngay trên thông báo (Android)
 
-Không cần mở app: thông báo hiện luôn lệnh cần duyệt kèm nút (`lib/notifications.dart`).
+Không cần mở app: thông báo hiện luôn lệnh cần duyệt kèm nút (`lib/src/services/notification_service.dart`).
 
 - Thẻ duyệt thường: **Cho phép** / **Từ chối**. Thẻ rủi ro: **Mở để duyệt** / **Từ chối** — không có nút Cho phép,
   vì cho phép thao tác rủi ro phải qua vân tay, mà vân tay cần mở app.
@@ -94,7 +94,7 @@ Không cần mở app: thông báo hiện luôn lệnh cần duyệt kèm nút (
 - Máy không cho app chạy nền (tiết kiệm pin gắt) thì vẫn có thông báo thường như trước, bấm vào là mở app.
 - Cần bow-agent bản có gửi mã thẻ; bản cũ hơn thì thông báo như trước, không có nút. iOS chưa có nút trên thông báo.
 
-Nó hoạt động thế nào (`lib/remote.dart`, nửa server ở `src/core/remoteApproval.ts` của bow-agent):
+Nó hoạt động thế nào (`lib/src/services/remote_service.dart`, nửa server ở `src/core/remoteApproval.ts` của bow-agent):
 
 - Máy chạy bow ghi thẻ lên Realtime Database, app đọc (mỗi 4 giây khi app đang mở, và ngay khi có thông báo tới);
   app ghi quyết định, máy chạy bow đọc rồi tự áp. Khác mạng vẫn được, máy chạy bow không mở cổng nào.
@@ -107,7 +107,7 @@ Nó hoạt động thế nào (`lib/remote.dart`, nửa server ở `src/core/rem
 ## Giao diện và âm báo
 
 - Giao diện theo theme **kính** của web bow: hình nền Cực quang, tấm kính mờ, nút viên thuốc, dấu hồng tâm. Bảng màu
-  chép từ `web/styles.css` của bow-agent vào `lib/theme.dart` (hai bản sáng / tối theo máy) — đổi màu ở web thì đổi
+  chép từ `web/styles.css` của bow-agent vào `lib/src/themes/bow_theme.dart` (hai bản sáng / tối theo máy) — đổi màu ở web thì đổi
   lại ở đó.
 - **Mỗi việc một âm riêng**, nghe là biết mà không cần nhìn máy:
 
@@ -164,7 +164,7 @@ Lệnh này đăng ký app vào dự án đó và ghi đè ba file cấu hình �
 ## Phát hành APK mới
 
 ```sh
-# tăng `version` trong pubspec.yaml VÀ `appVersion` ở lib/version.dart (số hiện ở đầu màn hình; test bắt khi lệch)
+# tăng `version` trong pubspec.yaml VÀ `appVersion` ở lib/src/constants/version.dart (số hiện ở đầu màn hình; test bắt khi lệch)
 flutter build apk --release --target-platform android-arm64
 cp build/app/outputs/flutter-apk/app-release.apk /tmp/bow-notify.apk     # tên file cố định ⇒ link "latest" không đổi
 gh release create v<phiên bản> /tmp/bow-notify.apk --title "Bow Notify <phiên bản>" --notes "<có gì mới>"
@@ -180,3 +180,43 @@ mã là xong). Muốn cập nhật êm giữa nhiều máy build / CI thì tạo
 flutter analyze
 flutter test        # khuôn mã ghép phải khớp pairingUri() ở src/core/fcm.ts của bow-agent
 ```
+
+### Cấu trúc mã — MVVM + Riverpod
+
+Cùng cách chia thư mục với app Flutter của monorepo (`pages/<màn>/…_page.dart` + `…_vm.dart`, `components`, `models`,
+`services`, `themes`), chỉ khác: ViewModel là `Notifier` của Riverpod và service lấy qua provider.
+
+```
+lib/
+  main.dart                     khởi động: Firebase, thông báo, ProviderContainer
+  app/app.dart                  MaterialApp + theme
+  src/
+    models/                     dữ liệu + luật thuần (không Flutter, không mạng)
+      pairing.dart                mã ghép máy
+      pending_card.dart           thẻ chờ duyệt / câu hỏi / lời mời trả lời
+      card_action.dart            nút của một thẻ + quyết định ứng với từng nút
+      card_ref.dart               thứ gắn theo thông báo, sổ thông báo có nút đang hiện
+      received.dart               thông báo vừa nhận
+    services/                   nói chuyện với bên ngoài — mỗi service một provider
+      push_service.dart           FCM: quyền, tin tới, đăng ký topic
+      remote_service.dart         Realtime Database + mã hoá thẻ / quyết định
+      notification_service.dart   thông báo có nút, cả phần chạy nền
+      pairing_store.dart          lưu máy đã ghép
+      biometric_service.dart      vân tay / khuôn mặt / mật mã máy
+    pages/
+      home/home_vm.dart           ViewModel: HomeState + HomeVm (Notifier)
+      home/home_page.dart         View: vẽ HomeState, chuyển thao tác cho HomeVm
+      home/widgets/               mảnh của màn chính
+      scan/, setup/
+    components/                 widget dùng chung (kính, nút, icon 3D, hộp thoại…)
+    themes/, utils/, constants/
+```
+
+- **View không tự quyết gì**: nó đọc `ref.watch(homeVmProvider)` và gọi hàm của `HomeVm`. Thứ duy nhất View tự làm là việc
+  cần `BuildContext` — hộp thoại, chuyển màn, thanh báo (ViewModel trả về câu cần nói).
+- **ViewModel không biết Firebase / mạng**: nó chỉ gọi service qua provider ⇒ test thay service bằng bản giả
+  (`test/pages/home/home_vm_test.dart`) — không cần Firebase, không cần widget.
+- **Phần chạy nền** (thông báo tới lúc app đã tắt, nút trên thông báo) là isolate riêng, không có cây widget: nó tự dựng
+  một `ProviderContainer` để lấy đúng các service đó.
+- Thêm màn mới: `pages/<màn>/<màn>_page.dart` + `<màn>_vm.dart`; thêm nguồn dữ liệu mới: một class trong `services/` kèm
+  provider của nó.

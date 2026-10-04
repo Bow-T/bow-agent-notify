@@ -1,8 +1,10 @@
-import 'package:bow_notify/pairing.dart';
-import 'package:bow_notify/remote.dart';
+import 'package:bow_notify/src/models/pairing.dart';
+import 'package:bow_notify/src/models/pending_card.dart';
+import 'package:bow_notify/src/services/remote_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  const remote = RemoteService();
   // Bản mã do CHÍNH code server sinh (`seal(key, 'card', 'card-1', …)` ở src/core/remoteApproval.ts của bow-agent) với
   // khoá chỉ-dùng-cho-test 0x00…0x1f. Test này đỏ = hai bên không còn mã hoá khớp nhau.
   const key = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8';
@@ -15,7 +17,7 @@ void main() {
   test(
     'mở được thẻ do server mã hoá, đúng nội dung (kể cả chữ có dấu)',
     () async {
-      final json = await openCard(pairing, 'card-1', fromServer);
+      final json = await remote.openCard(pairing, 'card-1', fromServer);
       final card = PendingCard.fromJson(pairing, '4000', 'card-1', json)!;
       expect(card.kind, 'approval');
       expect(card.label, 'DUOCT-3327');
@@ -27,28 +29,34 @@ void main() {
   );
 
   test('sai mã thẻ / sai khoá / bản mã bị sửa / rác → null, không ném', () async {
-    expect(await openCard(pairing, 'card-2', fromServer), isNull);
+    expect(await remote.openCard(pairing, 'card-2', fromServer), isNull);
     final other = Pairing.parse(
       'bowpush://pair?t=bow-${'a' * 32}&p=bow-demo&n=Mac&k=${'B' * 43}&d=bow-demo-default-rtdb.firebaseio.com',
     )!;
-    expect(await openCard(other, 'card-1', fromServer), isNull);
+    expect(await remote.openCard(other, 'card-1', fromServer), isNull);
     final tampered = fromServer.replaceRange(
       40,
       41,
       fromServer[40] == 'A' ? 'B' : 'A',
     );
-    expect(await openCard(pairing, 'card-1', tampered), isNull);
-    expect(await openCard(pairing, 'card-1', 'không phải bản mã'), isNull);
+    expect(await remote.openCard(pairing, 'card-1', tampered), isNull);
+    expect(
+      await remote.openCard(pairing, 'card-1', 'không phải bản mã'),
+      isNull,
+    );
   });
 
   test(
     'trả lời: không mở được như một THẺ (khác chiều), mỗi lần mã hoá ra khác nhau',
     () async {
-      final reply = await sealReply(pairing, 'card-1', {'allow': true});
+      final reply = await remote.sealReply(pairing, 'card-1', {'allow': true});
       expect(reply.contains('='), isFalse);
       expect(reply.contains('allow'), isFalse);
-      expect(await openCard(pairing, 'card-1', reply), isNull);
-      expect(await sealReply(pairing, 'card-1', {'allow': true}), isNot(reply));
+      expect(await remote.openCard(pairing, 'card-1', reply), isNull);
+      expect(
+        await remote.sealReply(pairing, 'card-1', {'allow': true}),
+        isNot(reply),
+      );
     },
   );
 

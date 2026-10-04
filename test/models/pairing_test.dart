@@ -1,4 +1,4 @@
-import 'package:bow_notify/pairing.dart';
+import 'package:bow_notify/src/models/pairing.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

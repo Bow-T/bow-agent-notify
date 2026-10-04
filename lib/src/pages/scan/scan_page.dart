@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-import 'pairing.dart';
-import 'theme.dart';
+import '../../components/glass.dart';
+import '../../components/icon3d.dart';
+import '../../models/pairing.dart';
+import '../../themes/bow_theme.dart';
 
 /// Quét mã QR ghép máy. Trả chuỗi mã ghép qua `Navigator.pop` ngay khi thấy một mã của bow; QR khác bị bỏ qua.
 class ScanPage extends StatefulWidget {

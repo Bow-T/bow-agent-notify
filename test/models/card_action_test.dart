@@ -1,6 +1,7 @@
-import 'package:bow_notify/notifications.dart';
-import 'package:bow_notify/pairing.dart';
-import 'package:bow_notify/remote.dart';
+import 'package:bow_notify/src/models/card_action.dart';
+import 'package:bow_notify/src/models/card_ref.dart';
+import 'package:bow_notify/src/models/pairing.dart';
+import 'package:bow_notify/src/models/pending_card.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final _pairing = Pairing.parse(
