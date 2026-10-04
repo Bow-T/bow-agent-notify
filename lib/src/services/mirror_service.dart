@@ -25,8 +25,8 @@ class MirrorService {
   static const _silence = Duration(seconds: 75);
   static const _retry = Duration(seconds: 3);
 
-  /// Chờ máy chạy bow báo lại về một lệnh: nó chờ trang web tới lấy tối đa 30 giây + tab trả lời tối đa 15 giây.
-  static const _ackWait = Duration(seconds: 50);
+  /// Chờ máy chạy bow báo lại về một lệnh: nó chờ trang web tới lấy tối đa 30 giây + tab trả lời tối đa 30 giây.
+  static const _ackWait = Duration(seconds: 70);
   static const _ackEvery = Duration(milliseconds: 700);
 
   /// Database từ chối đọc (luật chưa có nhánh `mirror` — máy chưa bật tính năng): thử lại thưa hơn.
@@ -100,14 +100,38 @@ class MirrorService {
     });
   }
 
-  /// Gửi một câu vào tab [tabId] (máy phải đang bật "gõ từ điện thoại"). Ghi lệnh đã mã hoá lên database rồi CHỜ máy
-  /// chạy bow báo lại: tab đã nhận và tự gửi, hay vì sao không. Máy chờ trang web tới lấy tối đa 30 giây nên ở đây chờ
-  /// lâu hơn thế một chút.
+  /// Gửi một câu vào tab [tabId] (máy phải đang bật "gõ từ điện thoại"). Tab đang chạy thì câu thành lời nói chen.
   Future<SayResult> say(
     Pairing pairing,
     String port,
     String tabId,
     String text,
+  ) => _command(pairing, port, {'kind': 'say', 'tabId': tabId, 'text': text});
+
+  /// GIAO VIỆC MỚI: trang bow mở một tab mới ở dự án [projectId] (rỗng = thư mục mặc định của máy) rồi gửi [text] làm
+  /// đề bài. Tab mới thừa kế model / mode của tab gần nhất cùng dự án; [autoApprove] và [autopilot] KHÔNG thừa kế —
+  /// đúng giá trị truyền vào đây. Kết quả mang `tabId` của tab vừa mở.
+  Future<SayResult> newTask(
+    Pairing pairing,
+    String port, {
+    required String projectId,
+    required String text,
+    required bool autoApprove,
+    required bool autopilot,
+  }) => _command(pairing, port, {
+    'kind': 'new',
+    'projectId': projectId,
+    'text': text,
+    'autoApprove': autoApprove,
+    'autopilot': autopilot,
+  });
+
+  /// Ghi một lệnh đã mã hoá lên database rồi CHỜ máy chạy bow báo lại: tab đã nhận và tự gửi, hay vì sao không. Máy chờ
+  /// trang web tới lấy tối đa 30 giây + tab trả lời tối đa 30 giây nên ở đây chờ lâu hơn thế một chút.
+  Future<SayResult> _command(
+    Pairing pairing,
+    String port,
+    Map<String, Object?> command,
   ) async {
     final random = Random.secure();
     // Mã lệnh ngẫu nhiên 128 bit: dùng MỘT lần (máy chạy bow nhớ mã đã thấy), và bản mã buộc vào đúng mã này.
@@ -116,9 +140,7 @@ class MirrorService {
         random.nextInt(256).toRadixString(16).padLeft(2, '0'),
     ].join();
     final blob = await _remote.sealCommand(pairing, id, {
-      'kind': 'say',
-      'tabId': tabId,
-      'text': text,
+      ...command,
       'at': DateTime.now().millisecondsSinceEpoch,
     });
     final (status, _) = await _request(
@@ -130,7 +152,9 @@ class MirrorService {
       jsonEncode(blob),
     );
     // Database từ chối ghi: máy đó chưa bật quyền gõ (luật chưa có nhánh `commands`).
-    if (status == 401 || status == 403) return (ok: false, reason: 'denied');
+    if (status == 401 || status == 403) {
+      return (ok: false, reason: 'denied', tabId: '');
+    }
     if (status != 200) throw HttpException('HTTP $status');
 
     final ack = _url(pairing, '/$port/acks/$id');
@@ -146,9 +170,10 @@ class MirrorService {
       return (
         ok: opened['ok'] == true,
         reason: opened['reason'] is String ? opened['reason'] as String : '',
+        tabId: opened['tabId'] is String ? opened['tabId'] as String : '',
       );
     }
-    return (ok: false, reason: 'timeout');
+    return (ok: false, reason: 'timeout', tabId: '');
   }
 
   Future<(int, String)> _request(String method, Uri url, [String? body]) async {

@@ -37,6 +37,9 @@ class TypingGate extends Notifier<DateTime?> {
     return true;
   }
 
+  /// Vừa xác thực ở chỗ khác (giao việc mới luôn hỏi vân tay) — mở luôn phiên gõ để câu tiếp theo khỏi hỏi lại.
+  void unlockNow() => state = DateTime.now().add(window);
+
   /// App ra nền / người dùng tự khoá.
   void lock() => state = null;
 }

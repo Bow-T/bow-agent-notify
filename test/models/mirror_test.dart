@@ -87,4 +87,37 @@ void main() {
       expect(tabs('say').canSay, isFalse);
     },
   );
+
+  test(
+    'giao việc mới: quyền `new` + danh sách dự án đã đăng ký (dự án hỏng bị bỏ) + id dự án của từng tab',
+    () {
+      final tabs = MachineTabs.fromJson(_pairing, '4000', {
+        'at': 1,
+        'can': ['say', 'new'],
+        'projects': [
+          {'id': 'p1', 'name': 'labuse'},
+          {'id': '', 'name': 'rỗng'},
+          {'name': 'thiếu id'},
+          'rác',
+          {'id': 'p2'},
+        ],
+        'tabs': [
+          {'id': 't1', 'title': 'A', 'project': 'labuse', 'projectId': 'p1'},
+          {'id': 't2', 'title': 'B'},
+        ],
+      })!;
+      expect(tabs.canNew, isTrue);
+      expect(tabs.projects, [(id: 'p1', name: 'labuse'), (id: 'p2', name: '')]);
+      expect(tabs.tabs.map((t) => t.projectId), ['p1', '']);
+
+      // Server bản cũ (chỉ có quyền gõ, không gửi dự án): không có nút giao việc.
+      final old = MachineTabs.fromJson(_pairing, '4000', {
+        'at': 1,
+        'tabs': [],
+        'can': ['say'],
+      })!;
+      expect(old.canNew, isFalse);
+      expect(old.projects, isEmpty);
+    },
+  );
 }
