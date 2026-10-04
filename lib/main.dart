@@ -805,7 +805,8 @@ class PendingCardView extends StatefulWidget {
   final PendingCard card;
   final bool busy;
 
-  /// `{allow: bool}` cho thẻ duyệt; `{answers: {câu hỏi: nhãn đã chọn} | null}` cho câu hỏi (null = bỏ qua).
+  /// `{allow: bool}` cho thẻ duyệt; `{answers: {câu hỏi: nhãn đã chọn} | null}` cho câu hỏi (null = bỏ qua);
+  /// `{say: câu}` cho lời mời trả lời.
   final void Function(Map<String, Object?> reply) onDecide;
 
   @override
@@ -837,6 +838,7 @@ class _PendingCardViewState extends State<PendingCardView> {
     final c = Bow.of(context);
     final card = widget.card;
     final isQuestion = card.kind == 'question';
+    final isReply = card.kind == 'reply';
     final answered = card.questions.every(
       (q) => _picks[q.question]?.isNotEmpty ?? false,
     );
@@ -848,7 +850,14 @@ class _PendingCardViewState extends State<PendingCardView> {
         children: [
           Row(
             children: [
-              Icon3d(isQuestion ? 'chat' : 'shield', size: 34),
+              Icon3d(
+                isReply
+                    ? 'success'
+                    : isQuestion
+                    ? 'chat'
+                    : 'shield',
+                size: 34,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -906,10 +915,13 @@ class _PendingCardViewState extends State<PendingCardView> {
                   card.text,
                   style: TextStyle(
                     color: c.ink,
-                    fontSize: 13,
+                    fontSize: isReply ? 14 : 13,
                     height: 1.4,
-                    fontFamily: 'monospace',
-                    fontFamilyFallback: const ['Menlo', 'Courier'],
+                    // Lệnh thì chữ đều nét; lời agent (thẻ trả lời) là văn xuôi.
+                    fontFamily: isReply ? null : 'monospace',
+                    fontFamilyFallback: isReply
+                        ? null
+                        : const ['Menlo', 'Courier'],
                   ),
                 ),
               ),
@@ -979,49 +991,69 @@ class _PendingCardViewState extends State<PendingCardView> {
               const SizedBox(height: 6),
             ],
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: GlassButton(
-                  label: isQuestion
-                      ? t('Bỏ qua', 'Skip')
-                      : t('Từ chối', 'Deny'),
-                  onPressed: onDecide == null
-                      ? null
-                      : () => onDecide(
-                          isQuestion ? {'answers': null} : {'allow': false},
-                        ),
+          if (isReply)
+            // Lời mời trả lời: mỗi câu một nút — bấm là tab trên máy gửi đúng câu đó. Không có "từ chối": không
+            // chọn gì thì lượt cứ nằm đó như khi bạn rời bàn.
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (i, option) in card.options.indexed)
+                  GlassButton(
+                    label: widget.busy ? t('Đang gửi…', 'Sending…') : option,
+                    kind: i == 0
+                        ? GlassButtonKind.primary
+                        : GlassButtonKind.plain,
+                    onPressed: onDecide == null
+                        ? null
+                        : () => onDecide({'say': option}),
+                  ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: GlassButton(
+                    label: isQuestion
+                        ? t('Bỏ qua', 'Skip')
+                        : t('Từ chối', 'Deny'),
+                    onPressed: onDecide == null
+                        ? null
+                        : () => onDecide(
+                            isQuestion ? {'answers': null} : {'allow': false},
+                          ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: GlassButton(
-                  label: widget.busy
-                      ? t('Đang gửi…', 'Sending…')
-                      : isQuestion
-                      ? t('Gửi', 'Send')
-                      : t('Cho phép', 'Allow'),
-                  // Vân tay = icon phẳng trắng trên nền lam (hình 3D chìm trên nền màu nhấn).
-                  icon: card.risky ? Icons.fingerprint_rounded : null,
-                  kind: GlassButtonKind.primary,
-                  onPressed: onDecide == null || (isQuestion && !answered)
-                      ? null
-                      : () => onDecide(
-                          isQuestion
-                              ? {
-                                  'answers': {
-                                    for (final q in card.questions)
-                                      q.question: _picks[q.question]!.join(
-                                        ', ',
-                                      ),
-                                  },
-                                }
-                              : {'allow': true},
-                        ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: GlassButton(
+                    label: widget.busy
+                        ? t('Đang gửi…', 'Sending…')
+                        : isQuestion
+                        ? t('Gửi', 'Send')
+                        : t('Cho phép', 'Allow'),
+                    // Vân tay = icon phẳng trắng trên nền lam (hình 3D chìm trên nền màu nhấn).
+                    icon: card.risky ? Icons.fingerprint_rounded : null,
+                    kind: GlassButtonKind.primary,
+                    onPressed: onDecide == null || (isQuestion && !answered)
+                        ? null
+                        : () => onDecide(
+                            isQuestion
+                                ? {
+                                    'answers': {
+                                      for (final q in card.questions)
+                                        q.question: _picks[q.question]!.join(
+                                          ', ',
+                                        ),
+                                    },
+                                  }
+                                : {'allow': true},
+                          ),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );

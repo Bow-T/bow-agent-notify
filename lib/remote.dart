@@ -35,6 +35,7 @@ class PendingCard {
     required this.risky,
     required this.at,
     required this.questions,
+    this.options = const [],
   });
 
   /// Máy gửi thẻ — quyết định phải mã hoá bằng khoá của đúng máy này.
@@ -44,7 +45,8 @@ class PendingCard {
   final String port;
   final String id;
 
-  /// `approval` (cho phép / từ chối) hoặc `question` (chọn đáp án).
+  /// `approval` (cho phép / từ chối), `question` (chọn đáp án) hoặc `reply` (lượt đã xong, bow mời vài câu trả lời
+  /// nhanh — chọn một câu là tab trên máy gửi đúng câu đó).
   final String kind;
   final String label;
   final String tool;
@@ -55,6 +57,9 @@ class PendingCard {
   final DateTime at;
   final List<Question> questions;
 
+  /// Thẻ `reply`: các câu được mời. Chỉ gửi lại được đúng một câu trong đó.
+  final List<String> options;
+
   static PendingCard? fromJson(
     Pairing pairing,
     String port,
@@ -63,9 +68,16 @@ class PendingCard {
   ) {
     if (json is! Map) return null;
     final kind = json['kind'];
-    if (json['id'] != id || (kind != 'approval' && kind != 'question')) {
+    if (json['id'] != id ||
+        (kind != 'approval' && kind != 'question' && kind != 'reply')) {
       return null;
     }
+    final options = <String>[
+      for (final o
+          in (json['options'] is List ? json['options'] as List : const []))
+        if (o is String && o.isNotEmpty) o,
+    ];
+    if (kind == 'reply' && options.isEmpty) return null;
     String text(Object? v) => v is String ? v : '';
     final questions = <Question>[
       for (final q
@@ -99,6 +111,7 @@ class PendingCard {
         json['at'] is int ? json['at'] as int : 0,
       ),
       questions: questions,
+      options: options,
     );
   }
 }
@@ -209,7 +222,7 @@ Future<PendingCard?> fetchCard(Pairing pairing, String port, String id) async {
   );
 }
 
-/// Gửi quyết định cho [card]: `{allow: bool}` hoặc `{answers: {...} | null}`. Ném lỗi khi server cơ sở dữ liệu từ
+/// Gửi quyết định cho [card]: `{allow: bool}`, `{answers: {...} | null}` hoặc `{say: câu đã chọn}`. Ném lỗi khi server cơ sở dữ liệu từ
 /// chối — thường là thẻ này đã có trả lời (mỗi thẻ chỉ ghi được MỘT lần).
 Future<void> sendReply(PendingCard card, Map<String, Object?> reply) async {
   final (status, _) = await _call(
