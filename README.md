@@ -96,21 +96,29 @@ Không cần mở app: thông báo hiện luôn lệnh cần duyệt kèm nút (
 - Máy không cho app chạy nền (tiết kiệm pin gắt) thì vẫn có thông báo thường như trước, bấm vào là mở app.
 - Cần bow-agent bản có gửi mã thẻ; bản cũ hơn thì thông báo như trước, không có nút. iOS chưa có nút trên thông báo.
 
-### Tab trên máy — xem trang bow từ xa (chỉ xem)
+### Tab trên máy — xem trang bow từ xa, và gõ vào tab
 
 Bật ở web bow: hộp Thông báo điện thoại → tick **Xem tab và hội thoại trên điện thoại** (cần đang bật *Qua Firebase*).
 Màn chính có thêm mục **Tab trên máy**: thanh tab của trang bow — tab nào đang chạy, tab nào đang chờ bạn. Chạm vào một
 tab để đọc ~40 dòng cuối của hội thoại (đề bài, dòng tool, lời agent dựng Markdown), cập nhật trong lúc lượt chạy.
 
-- **Chỉ xem.** Không ra lệnh được từ đây; duyệt / trả lời vẫn ở thẻ "Chờ bạn duyệt".
+- **Mặc định chỉ xem.** Duyệt / trả lời nhanh vẫn ở thẻ "Chờ bạn duyệt".
+- **Gõ vào tab** (từ 1.8): khi máy bật thêm *Cho gõ vào tab từ điện thoại*, màn hội thoại có ô nhập. Câu bạn gõ được
+  tab trên máy tự gửi cho agent — y như gõ ở máy (tab đang chạy thì thành lời nói chen); lượt đó vẫn qua cổng duyệt.
+  - Lần đầu phải qua vân tay / khuôn mặt / mật mã máy; sau đó mở khoá gõ **5 phút**, app ra nền là khoá lại.
+  - Mỗi câu là một lệnh đã mã hoá bằng khoá ghép máy, dùng một lần; app chờ máy báo lại rồi mới coi là đã gửi.
+  - Không tới thì app nói rõ vì sao (trang bow không mở, tab đã đóng, khung soạn trên máy đang có tệp đính kèm, đồng hồ
+    lệch…) và giữ nguyên câu trong ô nhập để gửi lại.
+  - Chưa mở được tab mới từ điện thoại.
 - Dữ liệu là của trang web: web báo cái nó đang hiện, server mã hoá bằng khoá ghép máy rồi chép lên Realtime Database,
   app đọc theo luồng (đổi là thấy sau chừng một giây). Kết quả tool và nội dung sửa file không đi.
 - Trang bow phải đang mở. Trang đóng / máy ngủ quá ~2,5 phút thì app ghi rõ "không báo về từ HH:mm" — thứ đang hiện
   là bản cuối cùng nhận được.
 - App khuất thì đóng mọi luồng (không giữ kết nối khi không ai nhìn); mở lại là nghe tiếp.
 
-Mã: `lib/src/services/mirror_service.dart` (đọc + nghe luồng), `lib/src/pages/tabs/` (`tabs_vm.dart` thanh tab,
-`tab_vm.dart` + `tab_page.dart` hội thoại của một tab), `lib/src/models/rtdb_event.dart` (sự kiện của luồng database).
+Mã: `lib/src/services/mirror_service.dart` (đọc + nghe luồng + gửi lệnh), `lib/src/pages/tabs/` (`tabs_vm.dart` thanh
+tab, `tab_vm.dart` + `tab_page.dart` hội thoại của một tab, `typing_gate.dart` chốt mở khoá gõ),
+`lib/src/models/rtdb_event.dart` (sự kiện của luồng database).
 
 ### Widget màn hình chính (Android)
 
@@ -188,6 +196,7 @@ Nó hoạt động thế nào (`lib/src/services/remote_service.dart`, nửa ser
 | Thông báo không có nút duyệt | Cần app từ 1.4 + bow-agent bản gửi mã thẻ + máy đã ghép ghi "duyệt được từ đây". Máy chặn app chạy nền (tiết kiệm pin) thì chỉ có thông báo thường — cho app vào danh sách không tối ưu pin. |
 | Thông báo "đã xong" không có nút trả lời | Cần app từ 1.5 + bow-agent bản có lời mời trả lời. Lượt ngắn hơn 60 giây không báo (trừ khi bạn vừa thao tác từ điện thoại); ô nhập trên máy đang có bản nháp thì không mời; trang bow đã đóng thì không ai gửi được câu trả lời. |
 | Không thấy mục "Tab trên máy" | Máy đó chưa tick *Xem tab và hội thoại trên điện thoại* (hoặc chưa bật *Qua Firebase*), điện thoại ghép từ trước khi có khoá duyệt, hay trang bow chưa mở lần nào từ lúc bật. Cần app từ 1.7. |
+| Màn hội thoại không có ô nhập | Máy đó chưa tick *Cho gõ vào tab từ điện thoại*, tab đã đóng, hoặc trang bow đã im quá vài phút (ô nhập ẩn vì gửi cũng không ai nhận). Sau khi bật trên web, chờ tối đa nửa phút. |
 | Widget không cập nhật | Widget chỉ làm mới khi có thông báo tới, sau một quyết định, khi app mở, khi bấm ↻, hoặc mỗi 30 phút. Máy chặn app chạy nền (tiết kiệm pin) thì thông báo không gọi dậy được app — cho app vào danh sách không tối ưu pin. |
 | Bấm Cho phép báo "Không gửi được" | Thẻ đã có trả lời (mỗi thẻ ghi một lần), hoặc bow không còn chạy / trang bow đã đóng. |
 | App mở lên báo "Chưa có cấu hình Firebase" | Thiếu `google-services.json` / `GoogleService-Info.plist` trong bản build. |

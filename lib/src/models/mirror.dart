@@ -45,6 +45,7 @@ class MachineTabs {
     required this.at,
     required this.active,
     required this.tabs,
+    this.can = const {},
   });
 
   /// Trang web báo lại ít nhất mỗi phút; quá ngần này không thấy báo = trang đã đóng / máy đã ngủ.
@@ -59,6 +60,12 @@ class MachineTabs {
   /// Tab đang mở trên web.
   final String active;
   final List<MirrorTab> tabs;
+
+  /// Việc điện thoại ĐƯỢC làm ngoài xem — do máy chạy bow quyết (công tắc trên web). `say` = gõ vào tab đang mở.
+  final Set<String> can;
+
+  /// Máy này cho điện thoại gõ vào tab.
+  bool get canSay => can.contains('say');
 
   /// Dữ liệu đã cũ: trang bow trên máy không còn báo về.
   bool stale(DateTime now) => now.difference(at) > staleAfter;
@@ -75,6 +82,11 @@ class MachineTabs {
             in (json['tabs'] is List ? json['tabs'] as List : const []))
           ?MirrorTab.fromJson(tab),
       ],
+      can: {
+        for (final cap
+            in (json['can'] is List ? json['can'] as List : const []))
+          if (cap is String) cap,
+      },
     );
   }
 }
@@ -142,3 +154,7 @@ class MirrorItem {
 /// Một tab cụ thể trên một trang bow — thứ màn hội thoại cần để biết đọc ở đâu. Chỉ là ba chuỗi (so sánh bằng giá
 /// trị được) — máy đã ghép tra lại theo `topic`.
 typedef TabRef = ({String topic, String port, String tabId});
+
+/// Kết quả gửi một câu từ điện thoại vào tab. `reason` = vì sao không tới (mã do máy chạy bow / tab trả về, hoặc
+/// `timeout` / `denied` do app tự kết luận).
+typedef SayResult = ({bool ok, String reason});

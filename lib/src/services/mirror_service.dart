@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -23,6 +24,10 @@ class MirrorService {
   /// Realtime Database gửi `keep-alive` mỗi ~30 giây; im lâu hơn ngần này là đường truyền đã chết (đổi mạng, máy ngủ).
   static const _silence = Duration(seconds: 75);
   static const _retry = Duration(seconds: 3);
+
+  /// Chờ máy chạy bow báo lại về một lệnh: nó chờ trang web tới lấy tối đa 30 giây + tab trả lời tối đa 15 giây.
+  static const _ackWait = Duration(seconds: 50);
+  static const _ackEvery = Duration(milliseconds: 700);
 
   /// Database từ chối đọc (luật chưa có nhánh `mirror` — máy chưa bật tính năng): thử lại thưa hơn.
   static const _retryDenied = Duration(seconds: 30);
@@ -93,6 +98,76 @@ class MirrorService {
       opened.removeWhere((blob, _) => !seen.contains(blob));
       return items..sort((a, b) => a.order.compareTo(b.order));
     });
+  }
+
+  /// Gửi một câu vào tab [tabId] (máy phải đang bật "gõ từ điện thoại"). Ghi lệnh đã mã hoá lên database rồi CHỜ máy
+  /// chạy bow báo lại: tab đã nhận và tự gửi, hay vì sao không. Máy chờ trang web tới lấy tối đa 30 giây nên ở đây chờ
+  /// lâu hơn thế một chút.
+  Future<SayResult> say(
+    Pairing pairing,
+    String port,
+    String tabId,
+    String text,
+  ) async {
+    final random = Random.secure();
+    // Mã lệnh ngẫu nhiên 128 bit: dùng MỘT lần (máy chạy bow nhớ mã đã thấy), và bản mã buộc vào đúng mã này.
+    final id = [
+      for (var i = 0; i < 16; i++)
+        random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ].join();
+    final blob = await _remote.sealCommand(pairing, id, {
+      'kind': 'say',
+      'tabId': tabId,
+      'text': text,
+      'at': DateTime.now().millisecondsSinceEpoch,
+    });
+    final (status, _) = await _request(
+      'PUT',
+      Uri.https(
+        pairing.dbHost!,
+        '/bow/${pairing.topic}/commands/$port/$id.json',
+      ),
+      jsonEncode(blob),
+    );
+    // Database từ chối ghi: máy đó chưa bật quyền gõ (luật chưa có nhánh `commands`).
+    if (status == 401 || status == 403) return (ok: false, reason: 'denied');
+    if (status != 200) throw HttpException('HTTP $status');
+
+    final ack = _url(pairing, '/$port/acks/$id');
+    final deadline = DateTime.now().add(_ackWait);
+    while (DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(_ackEvery);
+      final (code, body) = await _request('GET', ack);
+      if (code != 200) continue;
+      final value = jsonDecode(body);
+      if (value is! String) continue; // chưa có
+      final opened = await _remote.openMirror(pairing, 'ack/$id', value);
+      if (opened is! Map) continue;
+      return (
+        ok: opened['ok'] == true,
+        reason: opened['reason'] is String ? opened['reason'] as String : '',
+      );
+    }
+    return (ok: false, reason: 'timeout');
+  }
+
+  Future<(int, String)> _request(String method, Uri url, [String? body]) async {
+    final client = HttpClient()..connectionTimeout = _timeout;
+    try {
+      final request = await client.openUrl(method, url).timeout(_timeout);
+      if (body != null) {
+        request.headers.contentType = ContentType.json;
+        request.write(body);
+      }
+      final response = await request.close().timeout(_timeout);
+      final text = await response
+          .transform(utf8.decoder)
+          .join()
+          .timeout(_timeout);
+      return (response.statusCode, text);
+    } finally {
+      client.close(force: true);
+    }
   }
 
   /// Giá trị của một nhánh, phát lại mỗi khi nó đổi. Rớt mạng thì tự nối lại (và phát lại giá trị đầy đủ).
