@@ -200,6 +200,7 @@ class _HomePageState extends ConsumerState<HomePage>
               padding: const EdgeInsets.only(bottom: 10),
               child: MachineTile(
                 pairing: pairing,
+                listening: !state.notListening.contains(pairing.topic),
                 onUnpair: () => _unpair(pairing),
               ),
             ),

@@ -22,6 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 class FakePush implements PushService {
   final messages = StreamController<RemoteMessage>.broadcast();
   final opened = StreamController<RemoteMessage>.broadcast();
+  final tokens = StreamController<String>.broadcast();
   final subscribed = <String>[];
   final unsubscribed = <String>[];
   bool denied = false;
@@ -35,6 +36,8 @@ class FakePush implements PushService {
   Stream<RemoteMessage> get onMessage => messages.stream;
   @override
   Stream<RemoteMessage> get onOpened => opened.stream;
+  @override
+  Stream<String> get onTokenRefresh => tokens.stream;
   @override
   Future<void> subscribe(String topic) async {
     if (offline) throw Exception('mất mạng');
@@ -185,8 +188,8 @@ typedef Harness = ({
 });
 
 /// Dựng ViewModel với các service giả và chờ nó khởi động xong (đọc máy đã ghép, xin quyền, đọc thẻ lần đầu).
-Future<Harness> _start({List<Pairing> saved = const []}) async {
-  final push = FakePush();
+Future<Harness> _start({List<Pairing> saved = const [], FakePush? push}) async {
+  push ??= FakePush();
   final store = FakeStore(saved);
   final remote = FakeRemote();
   final biometric = FakeBiometric();
@@ -231,6 +234,45 @@ void main() {
     expect(state.busy, isFalse);
   });
 
+  group('đăng ký nhận thông báo', () {
+    test(
+      'khởi động: đăng ký LẠI topic của mọi máy đã ghép (cài lại app / khôi phục dữ liệu là mất đăng ký)',
+      () async {
+        final a = _pairing('a');
+        final b = _pairing('b', key: false);
+        final h = await _start(saved: [a, b]);
+        expect(h.push.subscribed, [a.topic, b.topic]);
+        expect(h.container.read(homeVmProvider).notListening, isEmpty);
+      },
+    );
+
+    test('mã nhận thông báo của máy đổi → đăng ký lại', () async {
+      final a = _pairing('a');
+      final h = await _start(saved: [a]);
+      h.push.subscribed.clear();
+      h.push.tokens.add('token-mới');
+      await pumpEventQueue();
+      expect(h.push.subscribed, [a.topic]);
+    });
+
+    test(
+      'đăng ký hỏng (mất mạng) → app vẫn chạy, máy đó được đánh dấu "chưa nhận được"; có mạng lại thì hết',
+      () async {
+        final a = _pairing('a');
+        final push = FakePush()..offline = true;
+        final h = await _start(saved: [a], push: push);
+        final state = h.container.read(homeVmProvider);
+        expect(state.pairings, [a]);
+        expect(state.notListening, {a.topic});
+
+        push.offline = false;
+        push.tokens.add('token-mới');
+        await pumpEventQueue();
+        expect(h.container.read(homeVmProvider).notListening, isEmpty);
+      },
+    );
+  });
+
   group('ghép máy', () {
     test(
       'mã rác / mã của dự án Firebase khác → báo, không đăng ký, không lưu',
@@ -271,6 +313,8 @@ void main() {
       'quét lại đúng mã cũ → chỉ báo; cùng máy nhưng mã MỚI (thêm khoá duyệt) → thay bản đã lưu, không đăng ký lại',
       () async {
         final h = await _start(saved: [_pairing('a', key: false)]);
+        h.push.subscribed
+            .clear(); // lần đăng ký lại lúc khởi động — có test riêng
         expect(await h.vm.pair(_uri('a', key: false)), isNotNull);
         expect(
           h.container.read(homeVmProvider).pairings.single.canApprove,
