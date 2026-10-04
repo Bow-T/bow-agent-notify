@@ -96,6 +96,22 @@ Không cần mở app: thông báo hiện luôn lệnh cần duyệt kèm nút (
 - Máy không cho app chạy nền (tiết kiệm pin gắt) thì vẫn có thông báo thường như trước, bấm vào là mở app.
 - Cần bow-agent bản có gửi mã thẻ; bản cũ hơn thì thông báo như trước, không có nút. iOS chưa có nút trên thông báo.
 
+### Tab trên máy — xem trang bow từ xa (chỉ xem)
+
+Bật ở web bow: hộp Thông báo điện thoại → tick **Xem tab và hội thoại trên điện thoại** (cần đang bật *Qua Firebase*).
+Màn chính có thêm mục **Tab trên máy**: thanh tab của trang bow — tab nào đang chạy, tab nào đang chờ bạn. Chạm vào một
+tab để đọc ~40 dòng cuối của hội thoại (đề bài, dòng tool, lời agent dựng Markdown), cập nhật trong lúc lượt chạy.
+
+- **Chỉ xem.** Không ra lệnh được từ đây; duyệt / trả lời vẫn ở thẻ "Chờ bạn duyệt".
+- Dữ liệu là của trang web: web báo cái nó đang hiện, server mã hoá bằng khoá ghép máy rồi chép lên Realtime Database,
+  app đọc theo luồng (đổi là thấy sau chừng một giây). Kết quả tool và nội dung sửa file không đi.
+- Trang bow phải đang mở. Trang đóng / máy ngủ quá ~2,5 phút thì app ghi rõ "không báo về từ HH:mm" — thứ đang hiện
+  là bản cuối cùng nhận được.
+- App khuất thì đóng mọi luồng (không giữ kết nối khi không ai nhìn); mở lại là nghe tiếp.
+
+Mã: `lib/src/services/mirror_service.dart` (đọc + nghe luồng), `lib/src/pages/tabs/` (`tabs_vm.dart` thanh tab,
+`tab_vm.dart` + `tab_page.dart` hội thoại của một tab), `lib/src/models/rtdb_event.dart` (sự kiện của luồng database).
+
 ### Widget màn hình chính (Android)
 
 Hai widget, thêm từ bảng chọn widget của máy hoặc bấm **Thêm thẻ chờ duyệt** / **Thêm viên trạng thái** ngay trong app:
@@ -171,6 +187,7 @@ Nó hoạt động thế nào (`lib/src/services/remote_service.dart`, nửa ser
 | Thẻ không hiện ở "Chờ bạn duyệt" | Máy đó chưa bật *Duyệt từ điện thoại* (dòng máy đã ghép không ghi "duyệt được từ đây") → bật trên web rồi quét lại mã. Thẻ chỉ lên sau khi treo 1,5 giây. |
 | Thông báo không có nút duyệt | Cần app từ 1.4 + bow-agent bản gửi mã thẻ + máy đã ghép ghi "duyệt được từ đây". Máy chặn app chạy nền (tiết kiệm pin) thì chỉ có thông báo thường — cho app vào danh sách không tối ưu pin. |
 | Thông báo "đã xong" không có nút trả lời | Cần app từ 1.5 + bow-agent bản có lời mời trả lời. Lượt ngắn hơn 60 giây không báo (trừ khi bạn vừa thao tác từ điện thoại); ô nhập trên máy đang có bản nháp thì không mời; trang bow đã đóng thì không ai gửi được câu trả lời. |
+| Không thấy mục "Tab trên máy" | Máy đó chưa tick *Xem tab và hội thoại trên điện thoại* (hoặc chưa bật *Qua Firebase*), điện thoại ghép từ trước khi có khoá duyệt, hay trang bow chưa mở lần nào từ lúc bật. Cần app từ 1.7. |
 | Widget không cập nhật | Widget chỉ làm mới khi có thông báo tới, sau một quyết định, khi app mở, khi bấm ↻, hoặc mỗi 30 phút. Máy chặn app chạy nền (tiết kiệm pin) thì thông báo không gọi dậy được app — cho app vào danh sách không tối ưu pin. |
 | Bấm Cho phép báo "Không gửi được" | Thẻ đã có trả lời (mỗi thẻ ghi một lần), hoặc bow không còn chạy / trang bow đã đóng. |
 | App mở lên báo "Chưa có cấu hình Firebase" | Thiếu `google-services.json` / `GoogleService-Info.plist` trong bản build. |
@@ -223,9 +240,12 @@ lib/
       card_ref.dart               thứ gắn theo thông báo, sổ thông báo có nút đang hiện
       widget_snapshot.dart        mọi thứ widget màn hình chính cần để vẽ
       received.dart               thông báo vừa nhận
+      mirror.dart                 tab trên máy: thanh tab, dòng chat (chỉ xem)
+      rtdb_event.dart             sự kiện của luồng Realtime Database
     services/                   nói chuyện với bên ngoài — mỗi service một provider
       push_service.dart           FCM: quyền, tin tới, đăng ký topic
       remote_service.dart         Realtime Database + mã hoá thẻ / quyết định
+      mirror_service.dart         tab trên máy: đọc + nghe luồng
       notification_service.dart   thông báo có nút
       home_widget_service.dart    dữ liệu của widget màn hình chính + cú chạm vào nút của nó
       background.dart             các điểm vào chạy nền (thông báo đẩy, nút trên thông báo, nút trên widget)
@@ -235,6 +255,8 @@ lib/
       home/home_vm.dart           ViewModel: HomeState + HomeVm (Notifier)
       home/home_page.dart         View: vẽ HomeState, chuyển thao tác cho HomeVm
       home/widgets/               mảnh của màn chính
+      tabs/tabs_vm.dart           ViewModel thanh tab của các máy
+      tabs/tab_vm.dart            ViewModel hội thoại của một tab (+ tab_page.dart)
       scan/, setup/
     components/                 widget dùng chung (kính, nút, icon 3D, hộp thoại…)
     themes/, constants/

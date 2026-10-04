@@ -91,6 +91,9 @@ class FakeRemote implements RemoteService {
   Future<Object?> openCard(Pairing pairing, String id, String blob) =>
       throw UnimplementedError();
   @override
+  Future<Object?> openMirror(Pairing pairing, String id, String blob) =>
+      throw UnimplementedError();
+  @override
   Future<String> sealReply(Pairing pairing, String id, Object reply) =>
       throw UnimplementedError();
 }
