@@ -13,6 +13,7 @@ class MirrorTab {
     required this.project,
     required this.running,
     required this.pending,
+    this.projectId = '',
   });
 
   final String id;
@@ -20,6 +21,9 @@ class MirrorTab {
 
   /// Tên dự án của tab (rỗng = thư mục mặc định của server).
   final String project;
+
+  /// Id dự án của tab (rỗng = không gắn dự án) — màn "Giao việc mới" chọn sẵn dự án của tab đang mở.
+  final String projectId;
   final bool running;
 
   /// Số thẻ đang chờ người dùng ở tab đó.
@@ -31,6 +35,7 @@ class MirrorTab {
       id: json['id'] as String,
       title: _text(json['title']),
       project: _text(json['project']),
+      projectId: _text(json['projectId']),
       running: json['running'] == true,
       pending: json['pending'] is int ? json['pending'] as int : 0,
     );
@@ -46,6 +51,7 @@ class MachineTabs {
     required this.active,
     required this.tabs,
     this.can = const {},
+    this.projects = const [],
   });
 
   /// Trang web báo lại ít nhất mỗi phút; quá ngần này không thấy báo = trang đã đóng / máy đã ngủ.
@@ -67,6 +73,13 @@ class MachineTabs {
   /// Máy này cho điện thoại gõ vào tab.
   bool get canSay => can.contains('say');
 
+  /// Máy này cho điện thoại GIAO VIỆC MỚI (mở tab mới).
+  bool get canNew => can.contains('new');
+
+  /// Dự án đã đăng ký trên máy (id + tên) — giao việc mới chỉ chọn trong danh sách này. Rỗng = máy không dùng dự án
+  /// (một cổng một thư mục): việc mới chạy ở thư mục mặc định của nó.
+  final List<MirrorProject> projects;
+
   /// Dữ liệu đã cũ: trang bow trên máy không còn báo về.
   bool stale(DateTime now) => now.difference(at) > staleAfter;
 
@@ -81,6 +94,12 @@ class MachineTabs {
         for (final tab
             in (json['tabs'] is List ? json['tabs'] as List : const []))
           ?MirrorTab.fromJson(tab),
+      ],
+      projects: [
+        for (final p
+            in (json['projects'] is List ? json['projects'] as List : const []))
+          if (p is Map && p['id'] is String && (p['id'] as String).isNotEmpty)
+            (id: p['id'] as String, name: _text(p['name'])),
       ],
       can: {
         for (final cap
@@ -155,6 +174,12 @@ class MirrorItem {
 /// trị được) — máy đã ghép tra lại theo `topic`.
 typedef TabRef = ({String topic, String port, String tabId});
 
-/// Kết quả gửi một câu từ điện thoại vào tab. `reason` = vì sao không tới (mã do máy chạy bow / tab trả về, hoặc
-/// `timeout` / `denied` do app tự kết luận).
-typedef SayResult = ({bool ok, String reason});
+/// Kết quả gửi một lệnh từ điện thoại. `reason` = vì sao không tới (mã do máy chạy bow / tab trả về, hoặc `timeout` /
+/// `denied` do app tự kết luận). `tabId` = tab vừa mở (chỉ có ở lệnh giao việc mới).
+typedef SayResult = ({bool ok, String reason, String tabId});
+
+/// Một dự án đã đăng ký trên máy chạy bow.
+typedef MirrorProject = ({String id, String name});
+
+/// Một trang bow (máy đã ghép + cổng) — nơi nhận một việc mới.
+typedef MachineRef = ({String topic, String port});

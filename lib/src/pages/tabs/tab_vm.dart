@@ -61,6 +61,10 @@ String sayFailure(String reason) => switch (reason) {
     'Máy đó chưa bật "Cho gõ vào tab từ điện thoại".',
     'That machine has not enabled "Let the phone type into tabs".',
   ),
+  'no-project' => t(
+    'Dự án đó không còn trên máy.',
+    'That project is no longer on the machine.',
+  ),
   'timeout' => t(
     'Không thấy máy chạy bow trả lời (mất mạng, hoặc quyền gõ vừa bị tắt).',
     'No answer from the machine (network down, or typing was just turned off).',

@@ -19,9 +19,13 @@ String _clock(DateTime at) =>
 /// Hội thoại của một tab trên máy (View). Mở ra ở cuối, nơi có dòng mới nhất. Máy cho phép thì có ô nhập để gõ vào tab
 /// đó; không thì chỉ xem.
 class TabPage extends ConsumerStatefulWidget {
-  const TabPage({super.key, required this.tab});
+  const TabPage({super.key, required this.tab, this.fresh = false});
 
   final TabRef tab;
+
+  /// Tab vừa được mở bằng "Giao việc mới": máy chưa kịp báo thanh tab mới thì ghi "Đang mở tab…", không phải
+  /// "Tab đã đóng".
+  final bool fresh;
 
   @override
   ConsumerState<TabPage> createState() => _TabPageState();
@@ -30,6 +34,9 @@ class TabPage extends ConsumerStatefulWidget {
 class _TabPageState extends ConsumerState<TabPage> with WidgetsBindingObserver {
   TabVm get _vm => ref.read(tabVmProvider(widget.tab).notifier);
   final _input = TextEditingController();
+
+  /// Đã từng thấy tab này trong thanh tab của máy — sau đó mà mất thì là tab đã đóng thật.
+  bool _seen = false;
 
   @override
   void initState() {
@@ -97,6 +104,8 @@ class _TabPageState extends ConsumerState<TabPage> with WidgetsBindingObserver {
         .where((m) => m.pairing.topic == tab.topic && m.port == tab.port)
         .firstOrNull;
     final meta = machine?.tabs.where((t) => t.id == tab.tabId).firstOrNull;
+    if (meta != null) _seen = true;
+    final opening = meta == null && widget.fresh && !_seen;
     final stale = machine?.stale(DateTime.now()) ?? false;
     final items = state.items.reversed.toList();
     final spinner = SizedBox(
@@ -123,7 +132,9 @@ class _TabPageState extends ConsumerState<TabPage> with WidgetsBindingObserver {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            meta == null
+                            opening
+                                ? t('Đang mở tab…', 'Opening the tab…')
+                                : meta == null
                                 ? t('Tab đã đóng', 'Tab closed')
                                 : meta.title.isEmpty
                                 ? t('Tab mới', 'New tab')
@@ -151,7 +162,7 @@ class _TabPageState extends ConsumerState<TabPage> with WidgetsBindingObserver {
                         ],
                       ),
                     ),
-                    if (meta?.running == true) spinner,
+                    if (meta?.running == true || opening) spinner,
                   ],
                 ),
               ),
@@ -166,10 +177,15 @@ class _TabPageState extends ConsumerState<TabPage> with WidgetsBindingObserver {
                     : items.isEmpty
                     ? Center(
                         child: Text(
-                          t(
-                            'Tab này chưa có hội thoại.',
-                            'This tab has no conversation yet.',
-                          ),
+                          opening
+                              ? t(
+                                  'Máy đang mở tab và gửi đề bài…',
+                                  'The machine is opening the tab and sending the prompt…',
+                                )
+                              : t(
+                                  'Tab này chưa có hội thoại.',
+                                  'This tab has no conversation yet.',
+                                ),
                           style: TextStyle(color: c.muted),
                         ),
                       )

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bow_notify/src/models/mirror.dart';
 import 'package:bow_notify/src/models/pairing.dart';
+import 'package:bow_notify/src/pages/tabs/new_task_vm.dart';
 import 'package:bow_notify/src/pages/tabs/tab_vm.dart';
 import 'package:bow_notify/src/pages/tabs/tabs_vm.dart';
 import 'package:bow_notify/src/pages/tabs/typing_gate.dart';
@@ -21,8 +22,25 @@ class FakeMirror implements MirrorService {
 
   /// Các câu đã gửi vào tab (`cổng|tab|câu`) và kết quả máy sẽ báo lại.
   final said = <String>[];
-  SayResult answer = (ok: true, reason: '');
+  SayResult answer = (ok: true, reason: '', tabId: '');
   Completer<void>? hold;
+
+  /// Các việc mới đã giao (`cổng|dự án|đề bài|tự duyệt|autopilot`).
+  final tasks = <String>[];
+
+  @override
+  Future<SayResult> newTask(
+    Pairing pairing,
+    String port, {
+    required String projectId,
+    required String text,
+    required bool autoApprove,
+    required bool autopilot,
+  }) async {
+    tasks.add('$port|$projectId|$text|$autoApprove|$autopilot');
+    await hold?.future;
+    return answer;
+  }
 
   @override
   Future<SayResult> say(
@@ -291,7 +309,7 @@ void main() {
       'máy báo không tới (trang web không mở) → có câu báo lỗi, ô nhập được mở lại',
       () async {
         final h = open();
-        h.mirror.answer = (ok: false, reason: 'no-web');
+        h.mirror.answer = (ok: false, reason: 'no-web', tabId: '');
         final error = await h.vm.send('tiếp', askFallback: _never);
         expect(error, sayFailure('no-web'));
         expect(error, isNotEmpty);
@@ -324,9 +342,178 @@ void main() {
         'stale',
         'denied',
         'timeout',
+        'no-project',
       ];
       expect({for (final r in known) sayFailure(r)}.length, known.length);
       expect(sayFailure('gì-đó-mới'), sayFailure('refused'));
     });
+  });
+
+  group('giao việc mới', () {
+    final a = _pairing('a');
+    const machine = (
+      topic: 'bow-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      port: '4000',
+    );
+
+    ({
+      ProviderContainer container,
+      FakeMirror mirror,
+      FakeBiometric biometric,
+      NewTaskVm vm,
+    })
+    open() {
+      final h = _setup([a]);
+      h.container.listen(newTaskVmProvider(machine), (_, _) {});
+      return (
+        container: h.container,
+        mirror: h.mirror,
+        biometric: h.biometric,
+        vm: h.container.read(newTaskVmProvider(machine).notifier),
+      );
+    }
+
+    test(
+      'LUÔN hỏi vân tay — kể cả khi phiên gõ 5 phút đang mở; gửi đúng dự án + hai công tắc; trả mã tab vừa mở',
+      () async {
+        final h = open();
+        expect(a.topic, machine.topic);
+        h.mirror.answer = (ok: true, reason: '', tabId: 'tab-moi');
+        h.container.read(typingGateProvider.notifier).unlockNow();
+
+        final first = await h.vm.send(
+          '  sửa lỗi đăng nhập  ',
+          projectId: 'p1',
+          askFallback: _never,
+        );
+        expect(first, (tabId: 'tab-moi', error: ''));
+        expect(h.biometric.asked, 1);
+        expect(h.mirror.tasks, ['4000|p1|sửa lỗi đăng nhập|false|false']);
+
+        h.vm.setAutoApprove(true);
+        h.vm.setAutopilot(true);
+        await h.vm.send('DULB-12', projectId: 'p2', askFallback: _never);
+        expect(h.biometric.asked, 2); // việc thứ hai vẫn hỏi lại
+        expect(h.mirror.tasks.last, '4000|p2|DULB-12|true|true');
+      },
+    );
+
+    test(
+      'hai công tắc mặc định TẮT; giao xong thì phiên gõ được mở (câu kế trong tab mới khỏi hỏi lại)',
+      () async {
+        final h = open();
+        final state = h.container.read(newTaskVmProvider(machine));
+        expect((state.autoApprove, state.autopilot), (false, false));
+        expect(h.container.read(typingGateProvider), isNull);
+        await h.vm.send('việc', projectId: '', askFallback: _never);
+        expect(h.container.read(typingGateProvider), isNotNull);
+      },
+    );
+
+    test(
+      'vân tay không qua → KHÔNG gửi gì, không báo lỗi; máy không xác thực được thì hỏi hộp xác nhận',
+      () async {
+        final h = open();
+        h.biometric.answer = false;
+        expect(await h.vm.send('việc', projectId: 'p1', askFallback: _never), (
+          tabId: null,
+          error: '',
+        ));
+        h.biometric.answer = null;
+        expect(
+          await h.vm.send(
+            'việc',
+            projectId: 'p1',
+            askFallback: () async => false,
+          ),
+          (tabId: null, error: ''),
+        );
+        expect(h.mirror.tasks, isEmpty);
+        expect(h.container.read(typingGateProvider), isNull);
+        final ok = await h.vm.send(
+          'việc',
+          projectId: 'p1',
+          askFallback: () async => true,
+        );
+        expect(ok.error, '');
+        expect(h.mirror.tasks.length, 1);
+      },
+    );
+
+    test(
+      'máy từ chối (dự án đã gỡ / trang web không mở) → có câu báo lỗi, không mở phiên gõ, gửi lại được',
+      () async {
+        final h = open();
+        h.mirror.answer = (ok: false, reason: 'no-project', tabId: '');
+        final result = await h.vm.send(
+          'việc',
+          projectId: 'cũ',
+          askFallback: _never,
+        );
+        expect(result, (tabId: null, error: sayFailure('no-project')));
+        expect(h.container.read(typingGateProvider), isNull);
+        expect(h.container.read(newTaskVmProvider(machine)).sending, isFalse);
+      },
+    );
+
+    test(
+      'đang gửi dở thì không gửi chồng việc thứ hai; đề bài rỗng thì bỏ qua',
+      () async {
+        final h = open();
+        h.mirror.hold = Completer<void>();
+        final first = h.vm.send('một', projectId: 'p1', askFallback: _never);
+        await pumpEventQueue();
+        expect(h.container.read(newTaskVmProvider(machine)).sending, isTrue);
+        expect(await h.vm.send('hai', projectId: 'p1', askFallback: _never), (
+          tabId: null,
+          error: '',
+        ));
+        h.mirror.hold!.complete();
+        await first;
+        expect(h.mirror.tasks.length, 1);
+        expect(await h.vm.send('   ', projectId: 'p1', askFallback: _never), (
+          tabId: null,
+          error: '',
+        ));
+        expect(h.biometric.asked, 1);
+      },
+    );
+
+    test(
+      'dự án chọn sẵn = dự án của tab đang mở trên máy; tab đó không gắn dự án thì lấy dự án đầu; máy không có dự án thì rỗng',
+      () {
+        MachineTabs tabs(String activeProject, List<MirrorProject> projects) =>
+            MachineTabs(
+              pairing: a,
+              port: '4000',
+              at: DateTime.now(),
+              active: 't2',
+              projects: projects,
+              tabs: [
+                const MirrorTab(
+                  id: 't1',
+                  title: '',
+                  project: 'A',
+                  projectId: 'pa',
+                  running: false,
+                  pending: 0,
+                ),
+                MirrorTab(
+                  id: 't2',
+                  title: '',
+                  project: '',
+                  projectId: activeProject,
+                  running: false,
+                  pending: 0,
+                ),
+              ],
+            );
+        const projects = [(id: 'pa', name: 'A'), (id: 'pb', name: 'B')];
+        expect(defaultProject(tabs('pb', projects)), 'pb');
+        expect(defaultProject(tabs('', projects)), 'pa');
+        expect(defaultProject(tabs('đã-gỡ', projects)), 'pa');
+        expect(defaultProject(tabs('pb', const [])), '');
+      },
+    );
   });
 }

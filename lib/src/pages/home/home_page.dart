@@ -11,6 +11,7 @@ import '../../models/pending_card.dart';
 import '../../utils/l10n.dart';
 import '../scan/scan_page.dart';
 import 'home_vm.dart';
+import '../tabs/new_task_page.dart';
 import '../tabs/tab_page.dart';
 import '../tabs/tabs_vm.dart';
 import '../tabs/typing_gate.dart';
@@ -224,6 +225,13 @@ class _HomePageState extends ConsumerState<HomePage>
                     port: machine.port,
                     tabId: tab.id,
                   ),
+                ),
+              ),
+            ),
+            onNewTask: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => NewTaskPage(
+                  machine: (topic: machine.pairing.topic, port: machine.port),
                 ),
               ),
             ),
