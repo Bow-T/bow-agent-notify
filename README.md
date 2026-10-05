@@ -15,9 +15,12 @@ Phía gửi nằm trong repo [bow-agent](https://github.com/Bow-T/bow-agent): `s
 | Android | `dev.bow.bow_notify` — `android/app/google-services.json` |
 | iOS | `dev.bow.bowNotify` — `ios/Runner/GoogleService-Info.plist` |
 
-Hai file cấu hình trên và `firebase.json` được commit (repo riêng tư, clone về là build được). Chúng chỉ định danh
-app, không phải bí mật. **Khoá service account thì là bí mật** — nó chỉ nằm ở máy chạy bow
-(`~/.bow-agent/push.json`), đừng bao giờ bỏ vào repo này.
+Hai file cấu hình trên và `firebase.json` được commit (clone về là build được). Chúng chỉ định danh app, không phải
+bí mật — APK nào cũng mang sẵn đúng các giá trị đó. **Khoá service account thì là bí mật** — nó chỉ nằm ở máy chạy bow
+(`~/.bow-agent/push.json`), đừng bao giờ bỏ vào repo này. **Mã ghép máy (QR) cũng vậy**: nó là chìa khoá duyệt, đừng
+dán vào issue, ảnh chụp màn hình hay test.
+
+Repo này **công khai** (từ 2026-10-04) để điện thoại tải APK thẳng từ Releases mà không cần đăng nhập GitHub.
 
 FCM chỉ gửi được tới app thuộc **cùng dự án Firebase** với khoá service account của bên gửi; vì thế app nằm ở repo
 riêng chứ không trong bow-agent (cấu hình và mã định danh là của từng người / từng công ty).
@@ -29,9 +32,8 @@ Cần Flutter 3.41.4 (`fvm use` đọc `.fvmrc`).
 1. **Cài lên điện thoại**
    - Android: tải APK mới nhất —
      <https://github.com/Bow-T/bow-agent-notify/releases/latest/download/bow-notify.apk> — rồi mở file để cài (cho phép
-     "cài từ nguồn không xác định" khi được hỏi). Repo riêng tư nên trình duyệt trên điện thoại phải đăng nhập tài khoản
-     GitHub có quyền vào repo; chưa đăng nhập thì link báo 404. Web bow có sẵn nút **Tải APK** / **Chép link tải** trong
-     hộp Thông báo điện thoại.
+     "cài từ nguồn không xác định" khi được hỏi). Repo công khai nên link tải được ngay, không cần đăng nhập GitHub.
+     Web bow có sẵn nút **Tải APK** / **Chép link tải** trong hộp Thông báo điện thoại.
    - iOS: xem mục dưới, rồi `flutter run --release` với máy đã cắm.
 2. **Nạp khoá cho bow**: [Firebase Console → Service accounts](https://console.firebase.google.com/project/bow-agent-ai/settings/serviceaccounts/adminsdk)
    → *Generate new private key* → trên web bow mở **Cài đặt → Thông báo điện thoại → Thiết lập**, dán nguyên nội dung
