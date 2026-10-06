@@ -111,7 +111,7 @@ class _TabPageState extends ConsumerState<TabPage> with WidgetsBindingObserver {
     final spinner = SizedBox(
       width: 18,
       height: 18,
-      child: CircularProgressIndicator(strokeWidth: 2.4, color: c.accent),
+      child: CircularProgressIndicator(strokeWidth: 2.4, color: c.accentInk),
     );
     return Scaffold(
       body: Wallpaper(
@@ -316,14 +316,14 @@ class Composer extends StatelessWidget {
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.4,
-                      color: c.accent,
+                      color: c.accentInk,
                     ),
                   ),
                 )
               : IconButton(
                   onPressed: onSend,
                   tooltip: t('Gửi', 'Send'),
-                  icon: Icon(Icons.send_rounded, color: c.accent),
+                  icon: Icon(Icons.send_rounded, color: c.accentInk),
                 ),
         ],
       ),
@@ -429,7 +429,7 @@ class ChatLine extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: item.toolError ? c.danger : c.muted,
+              color: item.toolError ? c.dangerInk : c.muted,
               fontSize: 12,
               height: 1.35,
               fontFamily: 'monospace',

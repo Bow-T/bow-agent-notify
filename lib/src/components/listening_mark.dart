@@ -4,7 +4,8 @@ import '../themes/bow_theme.dart';
 
 import 'icon3d.dart';
 
-/// Logo của app trong đĩa kính, có vòng sóng toả ra khi đang nghe — "agent còn sống và đang nối với máy này".
+/// Logo của app trong đĩa kính, có vòng sóng toả ra khi đang nghe — "agent còn sống và đang nối với máy này". Theme
+/// brutal: một ô thẻ viền mực đứng yên (đang nghe thì tô màu nhấn).
 class ListeningMark extends StatefulWidget {
   const ListeningMark({super.key, required this.active});
 
@@ -16,14 +17,17 @@ class ListeningMark extends StatefulWidget {
 
 class _ListeningMarkState extends State<ListeningMark>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 2600),
-  );
+  // Tạo ngay trong initState chứ không tạo lười: bản brutal không vẽ vòng sóng nên không ai đụng tới nó, và một
+  // `late final` tạo lười sẽ được dựng lần đầu đúng lúc `dispose()` — khi cây widget đã gỡ.
+  late final AnimationController _pulse;
 
   @override
   void initState() {
     super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2600),
+    );
     if (widget.active) _pulse.repeat();
   }
 
@@ -49,6 +53,25 @@ class _ListeningMarkState extends State<ListeningMark>
   @override
   Widget build(BuildContext context) {
     final c = Bow.of(context);
+    if (c.isBrutal) {
+      // Brutal phẳng và thô: không quầng sáng, không vòng sóng — một ô thẻ viền mực có bóng cứng.
+      return SizedBox.square(
+        dimension: 96,
+        child: Center(
+          child: Container(
+            width: 64,
+            height: 64,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: widget.active ? c.accent : c.surface,
+              border: Border.all(color: c.ink, width: c.line),
+              boxShadow: c.hardShadow(3),
+            ),
+            child: const Icon3d('logo_mark', size: 46),
+          ),
+        ),
+      );
+    }
     final color = widget.active ? c.accent : c.muted;
     Widget ring(double phase) => AnimatedBuilder(
       animation: _pulse,

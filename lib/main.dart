@@ -1,9 +1,12 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
+import 'src/pages/settings/appearance_vm.dart';
 import 'src/services/background.dart';
 import 'src/services/home_widget_service.dart';
 import 'src/services/notification_service.dart';
@@ -21,6 +24,19 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Một container cho cả app: service khởi động ở đây cũng chính là service các ViewModel dùng về sau.
   final container = ProviderContainer();
+  // Giấy phép của hai phông chữ đi kèm app (theme brutal) — hiện ở Cài đặt → Giấy phép mã nguồn mở.
+  LicenseRegistry.addLicense(() async* {
+    for (final (font, file) in const [
+      ('Space Grotesk', 'OFL-SpaceGrotesk.txt'),
+      ('Space Mono', 'OFL-SpaceMono.txt'),
+    ]) {
+      yield LicenseEntryWithLineBreaks([
+        font,
+      ], await rootBundle.loadString('assets/fonts/$file'));
+    }
+  });
+  // Theme người dùng đã chọn: nạp trước khung hình đầu tiên (không phụ thuộc Firebase).
+  await container.read(appearanceVmProvider.notifier).load();
   String? firebaseError;
   try {
     // Không truyền options: đọc cấu hình native do `flutterfire configure` đặt (google-services.json /

@@ -58,7 +58,7 @@ class MachineTile extends StatelessWidget {
                       'Could not register for notifications — needs network, reopen the app to retry.',
                     ),
                     style: TextStyle(
-                      color: c.danger,
+                      color: c.dangerInk,
                       fontSize: 12.5,
                       height: 1.35,
                     ),

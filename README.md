@@ -63,7 +63,7 @@ Thanh điều hướng dưới có bốn mục; thanh trên chỉ có logo và n
 | **Hôm nay** | Thứ đang cần bạn: thẻ chờ duyệt, câu agent hỏi, lời mời trả lời, và vài thông báo vừa tới. Số thẻ đang chờ hiện trên thanh dưới ở mọi mục. Chưa ghép máy nào thì đây là màn hướng dẫn ghép. |
 | **Tab** | Thanh tab của trang bow trên máy (lọc: tất cả / đang chạy / chờ bạn), chạm để đọc hội thoại và gõ tiếp, nút *Giao việc mới*. |
 | **Hoạt động** | Mọi thông báo đã tới từ lúc mở app. |
-| **Cài đặt** | Máy đã ghép (ghép thêm / bỏ ghép), quyền thông báo, widget màn hình chính, phiên bản. |
+| **Cài đặt** | Máy đã ghép (ghép thêm / bỏ ghép), quyền thông báo, widget màn hình chính, giao diện (hai theme), phiên bản, giấy phép. |
 
 ## Nó hoạt động thế nào
 
@@ -178,9 +178,20 @@ Nó hoạt động thế nào (`lib/src/services/remote_service.dart`, nửa ser
 
 ## Giao diện và âm báo
 
-- Giao diện theo theme **kính** của web bow: hình nền Cực quang, tấm kính mờ, nút viên thuốc, dấu hồng tâm. Bảng màu
-  chép từ `web/styles.css` của bow-agent vào `lib/src/themes/bow_theme.dart` (hai bản sáng / tối theo máy) — đổi màu ở web thì đổi
-  lại ở đó.
+- **Hai theme của web bow**, chọn ở *Cài đặt → Giao diện* (đổi là áp ngay, lần mở sau vẫn giữ):
+  - **Kính** (mặc định): hình nền Cực quang, tấm kính mờ, nút viên thuốc. Chế độ màu *Theo máy / Sáng / Tối*.
+  - **Brutal** (Neo Brutalism): nền kem có lưới chấm, thẻ đặc viền mực dày, bóng cứng, góc vuông, màu nhấn vàng, nút
+    chữ IN HOA; cặp nút duyệt là khối oải hương / san hô; icon 3D có viền mực. Chỉ có một bản sáng (như web).
+
+  Bảng màu chép từ `web/styles.css` của bow-agent vào `lib/src/themes/bow_theme.dart` (`Bow.light` / `Bow.dark` /
+  `Bow.brutal`) — đổi màu ở web thì đổi lại ở đó. Widget không tự rẽ nhánh theo theme cho thứ thuộc về HÌNH: hỏi
+  `Bow.of(context)` (`radius()`, `line`, `hardShadow()`, `accentInk`, `onAccent`…); chỉ các thành phần gốc
+  (`Glass`, `GlassButton`, `Wallpaper`, `Icon3d`, thanh điều hướng) mới có hai cách vẽ. Thêm widget mới thì dùng lại
+  các thành phần đó và soát cả hai theme. Lớp phủ của màn quét luôn là kính tối (hình camera gần như luôn tối).
+  Widget màn hình chính và thông báo của Android không theo lựa chọn này.
+- Phông của brutal là **Space Grotesk** + **Space Mono** như web (`assets/fonts/`, bản rút gọn Latin + tiếng Việt của
+  Google Fonts, giấy phép SIL OFL 1.1 kèm trong cùng thư mục và hiện ở *Cài đặt → Giấy phép mã nguồn mở*). Ký tự ngoài
+  bộ đó (vd `→`) rơi về phông của máy.
 - **Mỗi việc một âm riêng**, nghe là biết mà không cần nhìn máy:
 
   | Âm | Khi nào | Kênh Android |
@@ -203,7 +214,7 @@ Nó hoạt động thế nào (`lib/src/services/remote_service.dart`, nửa ser
   node --import <bow-agent>/node_modules/tsx/dist/esm/index.mjs tool/export_icons.mts <bow-agent>/web/icons3d.ts   # → tool/icons/*.svg
   tool/render_icons.sh   # → assets/icons/*.png, icon app iOS, lớp trước icon thích ứng Android (cần `brew install librsvg`)
   ```
-  Nút trên nền lam (Quét mã ghép) dùng icon phẳng màu trắng — hình 3D có màu riêng nên chìm trên nền màu nhấn.
+  Nút trên nền màu nhấn (Quét mã ghép) dùng icon phẳng một màu — hình 3D có màu riêng nên chìm trên nền đó.
   Icon thông báo trên thanh trạng thái và icon "theo màu chủ đề" của Android là hình quả cầu MỘT MÀU (vector trong
   `res/drawable`) vì Android chỉ lấy hình rồi tự tô màu.
 
@@ -274,6 +285,7 @@ lib/
       card_ref.dart               thứ gắn theo thông báo, sổ thông báo có nút đang hiện
       widget_snapshot.dart        mọi thứ widget màn hình chính cần để vẽ
       received.dart               thông báo vừa nhận
+      appearance.dart             lựa chọn giao diện: phong cách + chế độ màu
       mirror.dart                 tab trên máy: thanh tab, dự án, dòng chat
       rtdb_event.dart             sự kiện của luồng Realtime Database
     services/                   nói chuyện với bên ngoài — mỗi service một provider
@@ -284,6 +296,7 @@ lib/
       home_widget_service.dart    dữ liệu của widget màn hình chính + cú chạm vào nút của nó
       background.dart             các điểm vào chạy nền (thông báo đẩy, nút trên thông báo, nút trên widget)
       pairing_store.dart          lưu máy đã ghép
+      appearance_store.dart       lưu lựa chọn giao diện
       biometric_service.dart      vân tay / khuôn mặt / mật mã máy
     pages/
       shell/shell_page.dart       khung app: thanh trên, bốn mục ở thanh dưới, vòng đời app
@@ -296,7 +309,8 @@ lib/
       tabs/tab_vm.dart            ViewModel hội thoại của một tab (+ tab_page.dart)
       tabs/new_task_vm.dart       ViewModel giao việc mới (+ new_task_page.dart)
       activity/activity_page.dart mục Hoạt động
-      settings/settings_page.dart mục Cài đặt (+ widgets/: dòng máy đã ghép, mời ghim widget)
+      settings/settings_page.dart mục Cài đặt (+ widgets/: dòng máy đã ghép, mời ghim widget, chọn giao diện)
+      settings/appearance_vm.dart ViewModel lựa chọn giao diện — MaterialApp đọc nó để chọn theme
       scan/, setup/
     components/                 widget dùng chung (kính, nút, icon 3D, hộp thoại, thanh điều hướng dưới…)
     themes/, constants/

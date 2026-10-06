@@ -12,11 +12,13 @@ import '../../themes/bow_theme.dart';
 import '../../utils/l10n.dart';
 import '../home/home_vm.dart';
 import '../shell/pair_actions.dart';
+import 'appearance_vm.dart';
+import 'widgets/appearance_tile.dart';
 import 'widgets/machine_tile.dart';
 import 'widgets/pin_widget_tile.dart';
 
-/// Mục "Cài đặt": máy đã ghép, quyền thông báo, widget màn hình chính, phiên bản. Dùng chung `HomeVm` — máy đã ghép
-/// và quyền thông báo là trạng thái của cả app chứ không riêng màn này.
+/// Mục "Cài đặt": máy đã ghép, quyền thông báo, widget màn hình chính, giao diện, phiên bản. Dùng chung `HomeVm` — máy
+/// đã ghép và quyền thông báo là trạng thái của cả app chứ không riêng màn này.
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
@@ -88,17 +90,34 @@ class SettingsPage extends ConsumerWidget {
                   'Turned off — enable them in the phone settings.',
                 )
               : t('Đang bật', 'On'),
-          subtitleColor: state.notifyDenied ? c.danger : null,
+          subtitleColor: state.notifyDenied ? c.dangerInk : null,
         ),
         if (state.canPinWidget && paired) ...[
           SectionTitle(t('Màn hình chính', 'Home screen')),
           PinWidgetTile(onPin: (status) => vm.pinWidget(status: status)),
         ],
+        SectionTitle(t('Giao diện', 'Appearance')),
+        AppearanceTile(
+          appearance: ref.watch(appearanceVmProvider),
+          onStyle: ref.read(appearanceVmProvider.notifier).setStyle,
+          onMode: ref.read(appearanceVmProvider.notifier).setMode,
+        ),
         SectionTitle(t('Về ứng dụng', 'About')),
         RowTile(
           icon: 'info',
           title: 'Bow Notify',
           subtitle: t('Phiên bản $appVersion', 'Version $appVersion'),
+        ),
+        const SizedBox(height: 10),
+        // Phông chữ của theme brutal (và các gói app dùng) có giấy phép đòi kèm nguyên văn khi phát hành.
+        RowTile(
+          icon: 'layers',
+          title: t('Giấy phép mã nguồn mở', 'Open-source licences'),
+          onTap: () => showLicensePage(
+            context: context,
+            applicationName: 'Bow Notify',
+            applicationVersion: appVersion,
+          ),
         ),
       ],
     );
