@@ -4,114 +4,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../components/bow_scaffold.dart';
 import '../../components/glass_button.dart';
 import '../../components/glass_dialog.dart';
-import '../../components/icon3d.dart';
+import '../../components/recent_list.dart';
 import '../../components/section_title.dart';
-import '../../models/pairing.dart';
 import '../../models/pending_card.dart';
 import '../../utils/l10n.dart';
-import '../scan/scan_page.dart';
-import 'home_vm.dart';
-import '../tabs/new_task_page.dart';
-import '../tabs/tab_page.dart';
+import '../shell/pair_actions.dart';
+import '../shell/shell_vm.dart';
 import '../tabs/tabs_vm.dart';
-import '../tabs/typing_gate.dart';
-import 'widgets/machine_tabs_section.dart';
-import 'widgets/machine_tile.dart';
+import 'home_vm.dart';
+import 'widgets/onboarding_card.dart';
 import 'widgets/pending_card_view.dart';
-import 'widgets/pin_widget_tile.dart';
-import 'widgets/recent_list.dart';
 import 'widgets/status_card.dart';
 
-/// Màn chính (View): chỉ vẽ `HomeState` và chuyển thao tác của người dùng cho `HomeVm`. Thứ duy nhất nó tự làm là
-/// những việc cần `BuildContext` — hộp thoại, chuyển màn, thanh báo.
-class HomePage extends ConsumerStatefulWidget {
+/// Mục "Hôm nay" (View): chỉ thứ đang cần người dùng — thẻ chờ duyệt, câu agent hỏi, và vài thông báo vừa tới. Chưa
+/// ghép máy nào thì là màn hướng dẫn ghép. Nó chỉ vẽ `HomeState` và chuyển thao tác cho `HomeVm`.
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
-  @override
-  ConsumerState<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends ConsumerState<HomePage>
-    with WidgetsBindingObserver {
-  HomeVm get _vm => ref.read(homeVmProvider.notifier);
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    final tabs = ref.read(tabsVmProvider.notifier);
-    if (state == AppLifecycleState.resumed) {
-      _vm.resumed();
-      tabs.resumed();
-    } else {
-      _vm.paused();
-      tabs.paused();
-      // App ra nền: khoá lại quyền gõ lệnh (lần sau phải qua vân tay).
-      ref.read(typingGateProvider.notifier).lock();
-    }
-  }
-
-  /// Hiện câu ViewModel trả về (`null` = không có gì để nói).
-  void _say(String? text) {
-    if (text == null || !mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(text)));
-  }
-
-  Future<void> _pair(String? raw) async => _say(await _vm.pair(raw));
-
-  Future<void> _scan() async {
-    final raw = await Navigator.of(context).push<String>(
-      MaterialPageRoute(
-        builder: (_) => ScanPage(
-          title: t('Quét mã ghép', 'Scan pairing code'),
-          hint: t(
-            'Đưa camera vào mã QR ở web bow: Cài đặt → Thông báo điện thoại.',
-            'Point at the QR code in bow: Settings → Phone notifications.',
-          ),
-          pasteLabel: t('Dán mã ghép', 'Paste pairing code'),
-        ),
-      ),
-    );
-    await _pair(raw);
-  }
-
-  Future<void> _unpair(Pairing pairing) async {
-    final ok = await showGlassDialog<bool>(
-      context,
-      title: t('Bỏ ghép ${pairing.host}?', 'Unpair ${pairing.host}?'),
-      content: Text(
-        t(
-          'Điện thoại này thôi nhận thông báo từ máy đó.',
-          'This phone stops receiving notifications from it.',
-        ),
-      ),
-      actions: (close) => [
-        GlassButton(label: t('Thôi', 'Cancel'), onPressed: () => close(false)),
-        GlassButton(
-          label: t('Bỏ ghép', 'Unpair'),
-          kind: GlassButtonKind.danger,
-          onPressed: () => close(true),
-        ),
-      ],
-    );
-    if (ok == true) _say(await _vm.unpair(pairing));
-  }
+  /// Số thông báo vừa nhận hiện ở đây; còn lại xem ở mục Hoạt động.
+  static const _recentShown = 3;
 
   /// Hộp xác nhận cho thao tác rủi ro trên máy KHÔNG có vân tay / khoá màn hình (ViewModel gọi khi cần).
-  Future<bool> _askRisky(PendingCard card) async {
-    if (!mounted) return false;
+  Future<bool> _askRisky(BuildContext context, PendingCard card) async {
+    if (!context.mounted) return false;
     final ok = await showGlassDialog<bool>(
       context,
       title: t('Cho phép thao tác rủi ro?', 'Allow a risky action?'),
@@ -128,37 +43,60 @@ class _HomePageState extends ConsumerState<HomePage>
     return ok == true;
   }
 
-  Future<void> _decide(PendingCard card, Map<String, Object?> reply) async =>
-      _say(await _vm.decide(card, reply, askRisky: () => _askRisky(card)));
+  Future<void> _decide(
+    BuildContext context,
+    WidgetRef ref,
+    PendingCard card,
+    Map<String, Object?> reply,
+  ) async {
+    final result = await ref
+        .read(homeVmProvider.notifier)
+        .decide(card, reply, askRisky: () => _askRisky(context, card));
+    if (context.mounted) say(context, result);
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homeVmProvider);
-    final paired = state.pairings.isNotEmpty;
-    // Thanh tab của các trang bow đang mở trên máy (chỉ xem) — rỗng khi máy chưa bật tính năng đó.
-    final machines = [
-      for (final machine in ref.watch(tabsVmProvider))
-        if (machine.tabs.isNotEmpty) machine,
-    ];
-    return BowScaffold(
-      // Ghép máy là việc làm MỘT lần ⇒ chỉ là một nút nhỏ ở thanh trên, không chiếm cả thanh đáy của màn hình.
-      action: IconButton(
-        onPressed: state.busy ? null : _scan,
-        tooltip: t('Quét mã ghép', 'Scan pairing code'),
-        icon: const Icon3d('camera', size: 28),
-      ),
+    final shell = ref.read(shellVmProvider.notifier);
+    if (state.pairings.isEmpty) {
+      return ListView(
+        padding: BowScaffold.listPadding(nav: true),
+        children: [
+          OnboardingCard(
+            busy: state.busy,
+            onScan: () => scanAndPair(context, ref),
+            onPaste: () => pasteAndPair(context, ref),
+          ),
+          SectionTitle(t('Ba bước', 'Three steps')),
+          const PairingSteps(),
+        ],
+      );
+    }
+    final running = ref
+        .watch(tabsVmProvider)
+        .expand((machine) => machine.tabs)
+        .where((tab) => tab.running)
+        .length;
+    return ListView(
+      padding: BowScaffold.listPadding(nav: true),
       children: [
-        StatusCard(
-          machines: state.pairings.length,
-          active: paired && !state.notifyDenied,
-          busy: state.busy,
-          onScan: _scan,
+        StatusStrip(
+          hosts: [for (final pairing in state.pairings) pairing.host],
+          notListening: state.notListening.length,
+          runningTabs: running,
+          onFix: () => shell.open(ShellTab.settings),
         ),
         if (state.notifyDenied) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           const NotifyDeniedCard(),
         ],
-        if (state.pending.isNotEmpty) ...[
+        if (state.pending.isEmpty) ...[
+          const SizedBox(height: 12),
+          NothingWaitingCard(
+            canApprove: state.pairings.any((pairing) => pairing.canApprove),
+          ),
+        ] else ...[
           SectionTitle(
             t(
               'Chờ bạn duyệt · ${state.pending.length}',
@@ -172,52 +110,19 @@ class _HomePageState extends ConsumerState<HomePage>
                 key: ValueKey(card.id),
                 card: card,
                 busy: state.sending.contains(card.id),
-                onDecide: (reply) => _decide(card, reply),
+                onDecide: (reply) => _decide(context, ref, card, reply),
               ),
             ),
-        ],
-        for (final machine in machines)
-          MachineTabsSection(
-            machine: machine,
-            showHost: machines.length > 1,
-            onOpen: (tab) => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                builder: (_) => TabPage(
-                  tab: (
-                    topic: machine.pairing.topic,
-                    port: machine.port,
-                    tabId: tab.id,
-                  ),
-                ),
-              ),
-            ),
-            onNewTask: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                builder: (_) => NewTaskPage(
-                  machine: (topic: machine.pairing.topic, port: machine.port),
-                ),
-              ),
-            ),
-          ),
-        if (paired) ...[
-          SectionTitle(t('Máy đã ghép', 'Paired machines')),
-          for (final pairing in state.pairings)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: MachineTile(
-                pairing: pairing,
-                listening: !state.notListening.contains(pairing.topic),
-                onUnpair: () => _unpair(pairing),
-              ),
-            ),
-        ],
-        if (state.canPinWidget && paired) ...[
-          SectionTitle(t('Màn hình chính', 'Home screen')),
-          PinWidgetTile(onPin: (status) => _vm.pinWidget(status: status)),
         ],
         if (state.recent.isNotEmpty) ...[
-          SectionTitle(t('Vừa nhận', 'Just received')),
-          RecentList(items: state.recent),
+          SectionTitle(
+            t('Vừa nhận', 'Just received'),
+            action: state.recent.length > _recentShown
+                ? t('Xem tất cả ›', 'See all ›')
+                : null,
+            onAction: () => shell.open(ShellTab.activity),
+          ),
+          RecentList(items: state.recent.take(_recentShown).toList()),
         ],
       ],
     );

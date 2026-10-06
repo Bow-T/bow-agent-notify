@@ -21,11 +21,7 @@ Future<T?> showGlassDialog<T>(
         elevation: 0,
         insetPadding: const EdgeInsets.symmetric(horizontal: 22),
         child: Glass(
-          tint: c.isDark
-              ? const Color(0xB81B1E32)
-              : const Color(
-                  0xCCF6F7FB,
-                ), // --glass-thick: lớp nổi phải đục hơn tấm thường
+          tint: c.thick,
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,

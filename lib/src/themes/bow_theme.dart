@@ -20,6 +20,7 @@ class Bow {
     required this.hairline,
     required this.shadow,
     required this.well,
+    required this.thick,
     required this.blobs,
   });
 
@@ -38,6 +39,8 @@ class Bow {
   final Color hairline;
   final Color shadow; // --glass-drop
   final Color well; // --glass-well: ô nhập lõm xuống
+  final Color
+  thick; // --glass-thick: lớp NỔI (hộp thoại, thanh điều hướng) phải đục hơn tấm thường
   final double blobs; // độ đậm các mảng màu của hình nền
 
   static const light = Bow._(
@@ -56,6 +59,7 @@ class Bow {
     hairline: Color(0x1A000000),
     shadow: Color(0x4D14285A),
     well: Color(0x0D000000),
+    thick: Color(0xCCF6F7FB),
     blobs: 0.42,
   );
 
@@ -75,6 +79,7 @@ class Bow {
     hairline: Color(0x24FFFFFF),
     shadow: Color(0x99000000),
     well: Color(0x42000000),
+    thick: Color(0xB81B1E32),
     blobs: 1,
   );
 

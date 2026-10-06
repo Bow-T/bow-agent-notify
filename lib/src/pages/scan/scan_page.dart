@@ -3,25 +3,19 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../components/glass.dart';
 import '../../components/glass_button.dart';
-import '../../components/glass_dialog.dart';
 import '../../components/icon3d.dart';
 import '../../models/pairing.dart';
 import '../../themes/bow_theme.dart';
 import '../../utils/l10n.dart';
+import 'paste_code_dialog.dart';
 
 /// Quét mã QR ghép máy. Trả chuỗi mã ghép qua `Navigator.pop` ngay khi thấy một mã của bow; QR khác bị bỏ qua.
 /// Không quét được (mở web bow trên chính điện thoại này, máy không có camera) thì dán mã bằng nút ở dưới.
 class ScanPage extends StatefulWidget {
-  const ScanPage({
-    super.key,
-    required this.title,
-    required this.hint,
-    required this.pasteLabel,
-  });
+  const ScanPage({super.key, required this.title, required this.hint});
 
   final String title;
   final String hint;
-  final String pasteLabel;
 
   @override
   State<ScanPage> createState() => _ScanPageState();
@@ -34,32 +28,10 @@ class _ScanPageState extends State<ScanPage> {
   /// Hộp dán mã đang mở: camera thấy mã lúc này mà `pop` thì đóng nhầm cái hộp chứ không phải trang.
   bool _entering = false;
 
-  /// Nhập mã ghép bằng tay (web bow → "Chép mã"). Ô nhập thường chứ không tự đọc clipboard — iOS hỏi quyền mỗi lần
-  /// app tự đọc. Mã sai vẫn trả về: màn chính là nơi nói "đây không phải mã ghép của bow".
+  /// Dán mã bằng tay thay cho quét.
   Future<void> _enterCode() async {
-    final input = TextEditingController();
     _entering = true;
-    final raw = await showGlassDialog<String>(
-      context,
-      title: widget.pasteLabel,
-      content: TextField(
-        controller: input,
-        autofocus: true,
-        autocorrect: false,
-        enableSuggestions: false,
-        maxLines: 3,
-        style: const TextStyle(fontSize: 14),
-        decoration: const InputDecoration(hintText: 'bowpush://pair?…'),
-      ),
-      actions: (close) => [
-        GlassButton(label: t('Thôi', 'Cancel'), onPressed: () => close(null)),
-        GlassButton(
-          label: t('Ghép', 'Pair'),
-          kind: GlassButtonKind.primary,
-          onPressed: () => close(input.text),
-        ),
-      ],
-    );
+    final raw = await showPasteCodeDialog(context);
     _entering = false;
     if (raw == null || raw.trim().isEmpty || !mounted || _found) return;
     _found = true;
@@ -139,7 +111,7 @@ class _ScanPageState extends State<ScanPage> {
                           ),
                           const SizedBox(height: 12),
                           GlassButton(
-                            label: widget.pasteLabel,
+                            label: t('Dán mã ghép', 'Paste pairing code'),
                             onPressed: _enterCode,
                           ),
                         ],

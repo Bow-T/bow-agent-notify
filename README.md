@@ -38,8 +38,9 @@ Cần Flutter 3.41.4 (`fvm use` đọc `.fvmrc`).
 2. **Nạp khoá cho bow**: [Firebase Console → Service accounts](https://console.firebase.google.com/project/bow-agent-ai/settings/serviceaccounts/adminsdk)
    → *Generate new private key* → trên web bow mở **Cài đặt → Thông báo điện thoại → Thiết lập**, dán nguyên nội dung
    file JSON vừa tải.
-3. **Ghép máy**: trong app bấm nút quét ở góc trên (lần đầu còn có nút **Quét mã ghép** ngay trong thẻ đầu màn hình),
-   đưa camera vào mã QR ở hộp vừa mở. Không quét được thì bấm "Chép mã" trên web rồi bấm **Dán mã ghép** trong màn quét.
+3. **Ghép máy**: trong app bấm nút quét ở góc trên (lần đầu còn có nút **Quét mã ghép** to ở giữa màn; về sau ghép thêm
+   máy ở *Cài đặt → Ghép máy khác*), đưa camera vào mã QR ở hộp vừa mở. Không quét được thì bấm "Chép mã" trên web rồi
+   bấm **Dán mã ghép** (ở thẻ lần đầu hoặc trong màn quét).
 4. Bấm **Gửi thử** trên web — điện thoại rung là xong. Lần đầu sau khi ghép có thể chậm tới một phút (FCM cần thời
    gian ghi nhận đăng ký topic).
 
@@ -53,14 +54,26 @@ Cần Flutter 3.41.4 (`fvm use` đọc `.fvmrc`).
 - Bundle id `dev.bow.bowNotify` đã có Team khác đăng ký thì phải đổi: sửa trong Xcode rồi chạy lại
   `flutterfire configure --project=bow-agent-ai --platforms=android,ios` để đăng ký app iOS mới.
 
+## Bốn mục của app
+
+Thanh điều hướng dưới có bốn mục; thanh trên chỉ có logo và nút quét mã ghép.
+
+| Mục | Có gì |
+| --- | --- |
+| **Hôm nay** | Thứ đang cần bạn: thẻ chờ duyệt, câu agent hỏi, lời mời trả lời, và vài thông báo vừa tới. Số thẻ đang chờ hiện trên thanh dưới ở mọi mục. Chưa ghép máy nào thì đây là màn hướng dẫn ghép. |
+| **Tab** | Thanh tab của trang bow trên máy (lọc: tất cả / đang chạy / chờ bạn), chạm để đọc hội thoại và gõ tiếp, nút *Giao việc mới*. |
+| **Hoạt động** | Mọi thông báo đã tới từ lúc mở app. |
+| **Cài đặt** | Máy đã ghép (ghép thêm / bỏ ghép), quyền thông báo, widget màn hình chính, phiên bản. |
+
 ## Nó hoạt động thế nào
 
 - Mã QR chứa `bowpush://pair?t=<topic>&p=<dự án Firebase>&n=<tên máy>`. App kiểm dự án trong mã có khớp dự án nó
   được build cho không (lệch là không bao giờ nhận được gì, nên báo ngay), rồi `subscribeToTopic(<topic>)`.
 - Topic là một chuỗi ngẫu nhiên 128 bit, đóng vai mật khẩu: **ai có mã QR là nhận được thông báo**. Lộ mã thì bấm
   "Đổi mã ghép" trên web — mọi điện thoại phải quét lại.
-- Một điện thoại ghép được nhiều máy chạy bow (cùng dự án Firebase); mỗi máy một dòng, bỏ ghép từng máy.
-- App đang mở: thông báo hiện trong danh sách "Vừa nhận" (Android không tự hiện thông báo khi app ở trước mặt).
+- Một điện thoại ghép được nhiều máy chạy bow (cùng dự án Firebase); mỗi máy một dòng ở Cài đặt, bỏ ghép từng máy.
+- App đang mở: thông báo hiện ở "Vừa nhận" của mục Hôm nay và trong mục Hoạt động (Android không tự hiện thông báo khi
+  app ở trước mặt).
   App chạy nền / đã tắt: hệ điều hành hiện như mọi thông báo khác.
 - Thông báo cùng một lượt chạy **thay** nhau (không chồng thành dãy).
 
@@ -68,7 +81,7 @@ Cần Flutter 3.41.4 (`fvm use` đọc `.fvmrc`).
 
 Mặc định app chỉ báo. Bật ở web bow: hộp Thông báo điện thoại → **Duyệt từ điện thoại → Qua Firebase**, dán địa chỉ
 Realtime Database của dự án, rồi **quét lại mã QR** (mã mới mang thêm khoá duyệt). Dòng máy đã ghép sẽ ghi "duyệt được
-từ đây", và khi agent chờ bạn, mục **Chờ bạn duyệt** hiện ở đầu màn hình:
+từ đây", và khi agent chờ bạn, nhóm **Chờ bạn duyệt** hiện ở mục Hôm nay:
 
 - Thẻ duyệt: xem lệnh rồi bấm **Cho phép** / **Từ chối**. Thao tác rủi ro (`git push`, `rm`…) có nhãn "Rủi ro" và đòi
   vân tay / Face ID / mật mã máy trước khi gửi. Máy chưa đặt khoá màn hình thì hỏi lại bằng một hộp xác nhận.
@@ -101,7 +114,7 @@ Không cần mở app: thông báo hiện luôn lệnh cần duyệt kèm nút (
 ### Tab trên máy — xem trang bow từ xa, gõ vào tab, giao việc mới
 
 Bật ở web bow: hộp Thông báo điện thoại → tick **Xem tab và hội thoại trên điện thoại** (cần đang bật *Qua Firebase*).
-Màn chính có thêm mục **Tab trên máy**: thanh tab của trang bow — tab nào đang chạy, tab nào đang chờ bạn. Chạm vào một
+Mục **Tab** của app hiện thanh tab của trang bow — tab nào đang chạy, tab nào đang chờ bạn. Chạm vào một
 tab để đọc ~40 dòng cuối của hội thoại (đề bài, dòng tool, lời agent dựng Markdown), cập nhật trong lúc lượt chạy.
 
 - **Mặc định chỉ xem.** Duyệt / trả lời nhanh vẫn ở thẻ "Chờ bạn duyệt".
@@ -207,7 +220,7 @@ Nó hoạt động thế nào (`lib/src/services/remote_service.dart`, nửa ser
 | Thẻ không hiện ở "Chờ bạn duyệt" | Máy đó chưa bật *Duyệt từ điện thoại* (dòng máy đã ghép không ghi "duyệt được từ đây") → bật trên web rồi quét lại mã. Thẻ chỉ lên sau khi treo 1,5 giây. |
 | Thông báo không có nút duyệt | Cần app từ 1.4 + bow-agent bản gửi mã thẻ + máy đã ghép ghi "duyệt được từ đây". Máy chặn app chạy nền (tiết kiệm pin) thì chỉ có thông báo thường — cho app vào danh sách không tối ưu pin. |
 | Thông báo "đã xong" không có nút trả lời | Cần app từ 1.5 + bow-agent bản có lời mời trả lời. Lượt ngắn hơn 60 giây không báo (trừ khi bạn vừa thao tác từ điện thoại); ô nhập trên máy đang có bản nháp thì không mời; trang bow đã đóng thì không ai gửi được câu trả lời. |
-| Không thấy mục "Tab trên máy" | Máy đó chưa tick *Xem tab và hội thoại trên điện thoại* (hoặc chưa bật *Qua Firebase*), điện thoại ghép từ trước khi có khoá duyệt, hay trang bow chưa mở lần nào từ lúc bật. Cần app từ 1.7. |
+| Mục Tab ghi "Chưa có tab nào" | Máy đó chưa tick *Xem tab và hội thoại trên điện thoại* (hoặc chưa bật *Qua Firebase*), điện thoại ghép từ trước khi có khoá duyệt, hay trang bow chưa mở lần nào từ lúc bật. Cần app từ 1.7. |
 | Màn hội thoại không có ô nhập / không có nút Giao việc mới | Máy đó chưa tick *Cho gõ và giao việc từ điện thoại* (nút giao việc cần thêm bow-agent bản có giao việc mới + app từ 1.9), tab đã đóng, hoặc trang bow đã im quá vài phút (ô nhập ẩn vì gửi cũng không ai nhận). Sau khi bật trên web, chờ tối đa nửa phút. |
 | Widget không cập nhật | Widget chỉ làm mới khi có thông báo tới, sau một quyết định, khi app mở, khi bấm ↻, hoặc mỗi 30 phút. Máy chặn app chạy nền (tiết kiệm pin) thì thông báo không gọi dậy được app — cho app vào danh sách không tối ưu pin. |
 | Bấm Cho phép báo "Không gửi được" | Thẻ đã có trả lời (mỗi thẻ ghi một lần), hoặc bow không còn chạy / trang bow đã đóng. |
@@ -227,7 +240,7 @@ Lệnh này đăng ký app vào dự án đó và ghi đè ba file cấu hình �
 ## Phát hành APK mới
 
 ```sh
-# tăng `version` trong pubspec.yaml VÀ `appVersion` ở lib/src/constants/version.dart (số hiện ở đầu màn hình; test bắt khi lệch)
+# tăng `version` trong pubspec.yaml VÀ `appVersion` ở lib/src/constants/version.dart (số hiện ở Cài đặt → Về ứng dụng; test bắt khi lệch)
 flutter build apk --release --target-platform android-arm64
 cp build/app/outputs/flutter-apk/app-release.apk /tmp/bow-notify.apk     # tên file cố định ⇒ link "latest" không đổi
 gh release create v<phiên bản> /tmp/bow-notify.apk --title "Bow Notify <phiên bản>" --notes "<có gì mới>"
@@ -273,14 +286,19 @@ lib/
       pairing_store.dart          lưu máy đã ghép
       biometric_service.dart      vân tay / khuôn mặt / mật mã máy
     pages/
-      home/home_vm.dart           ViewModel: HomeState + HomeVm (Notifier)
-      home/home_page.dart         View: vẽ HomeState, chuyển thao tác cho HomeVm
-      home/widgets/               mảnh của màn chính
-      tabs/tabs_vm.dart           ViewModel thanh tab của các máy
+      shell/shell_page.dart       khung app: thanh trên, bốn mục ở thanh dưới, vòng đời app
+      shell/shell_vm.dart         mục đang mở (provider — màn con cũng chuyển mục được)
+      shell/pair_actions.dart     quét / dán mã rồi ghép, dùng chung cho mọi chỗ mở được việc ghép máy
+      home/home_vm.dart           ViewModel: HomeState + HomeVm (Notifier) — trạng thái chung của app
+      home/home_page.dart         mục Hôm nay (View): vẽ HomeState, chuyển thao tác cho HomeVm
+      home/widgets/               mảnh của mục Hôm nay (thẻ chờ, dòng trạng thái, thẻ lần đầu)
+      tabs/tabs_page.dart         mục Tab (+ tabs_vm.dart: thanh tab của các máy)
       tabs/tab_vm.dart            ViewModel hội thoại của một tab (+ tab_page.dart)
       tabs/new_task_vm.dart       ViewModel giao việc mới (+ new_task_page.dart)
+      activity/activity_page.dart mục Hoạt động
+      settings/settings_page.dart mục Cài đặt (+ widgets/: dòng máy đã ghép, mời ghim widget)
       scan/, setup/
-    components/                 widget dùng chung (kính, nút, icon 3D, hộp thoại…)
+    components/                 widget dùng chung (kính, nút, icon 3D, hộp thoại, thanh điều hướng dưới…)
     themes/, constants/
     utils/markdown.dart         lời agent (Markdown) → HTML rút gọn / chữ trơn cho thông báo và widget
 ```
