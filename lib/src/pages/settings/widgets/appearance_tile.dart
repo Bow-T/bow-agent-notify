@@ -7,18 +7,20 @@ import '../../../models/appearance.dart';
 import '../../../themes/bow_theme.dart';
 import '../../../utils/l10n.dart';
 
-/// Cài đặt → Giao diện: chọn phong cách (hai theme của web bow) và, với kính, chế độ màu.
+/// Cài đặt → Giao diện: chọn phong cách (hai theme của web bow), chế độ màu (chỉ với kính) và ngôn ngữ.
 class AppearanceTile extends StatelessWidget {
   const AppearanceTile({
     super.key,
     required this.appearance,
     required this.onStyle,
     required this.onMode,
+    required this.onLanguage,
   });
 
   final Appearance appearance;
   final ValueChanged<BowStyle> onStyle;
   final ValueChanged<GlassMode> onMode;
+  final ValueChanged<AppLanguage> onLanguage;
 
   @override
   Widget build(BuildContext context) {
@@ -100,6 +102,27 @@ class AppearanceTile extends StatelessWidget {
               ],
             ),
           ],
+          const SizedBox(height: 14),
+          Divider(height: 1, color: c.hairline),
+          const SizedBox(height: 12),
+          heading(
+            'globe',
+            t('Ngôn ngữ', 'Language'),
+            t(
+              'Chữ trong app, trên thông báo và widget.',
+              'Text in the app, on notifications and the widget.',
+            ),
+          ),
+          // Tên từng ngôn ngữ viết bằng chính nó — đang ở tiếng nào cũng đọc ra.
+          Segmented<AppLanguage>(
+            value: appearance.language,
+            onChanged: onLanguage,
+            options: [
+              (AppLanguage.system, t('Theo máy', 'System')),
+              (AppLanguage.vi, 'Tiếng Việt'),
+              (AppLanguage.en, 'English'),
+            ],
+          ),
         ],
       ),
     );

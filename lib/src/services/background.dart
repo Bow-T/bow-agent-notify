@@ -5,6 +5,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../utils/l10n.dart';
+import 'appearance_store.dart';
 import 'home_widget_service.dart';
 import 'notification_service.dart';
 
@@ -17,6 +19,16 @@ Future<void> _inBackground(
   DartPluginRegistrant.ensureInitialized();
   final container = ProviderContainer();
   try {
+    // Chữ trên thông báo / widget cũng phải theo ngôn ngữ người dùng chọn trong app (isolate này không chạy
+    // `main`, nên tự đọc lựa chọn đã lưu).
+    try {
+      forcedLanguage =
+          (await container.read(appearanceStoreProvider).load(fresh: true))
+              .language
+              .code;
+    } catch (_) {
+      // Không đọc được: theo ngôn ngữ của máy.
+    }
     await run(container);
   } finally {
     container.dispose();

@@ -12,13 +12,20 @@ import '../../themes/bow_theme.dart';
 import '../../utils/l10n.dart';
 import '../home/home_vm.dart';
 import '../shell/pair_actions.dart';
+import '../tabs/typing_gate.dart';
 import 'appearance_vm.dart';
+import 'diagnostics_page.dart';
+import 'guide_page.dart';
+import 'sounds_page.dart';
 import 'widgets/appearance_tile.dart';
 import 'widgets/machine_tile.dart';
 import 'widgets/pin_widget_tile.dart';
+import 'widgets/security_tile.dart';
+import 'widgets/update_tile.dart';
 
-/// Mục "Cài đặt": máy đã ghép, quyền thông báo, widget màn hình chính, giao diện, phiên bản. Dùng chung `HomeVm` — máy
-/// đã ghép và quyền thông báo là trạng thái của cả app chứ không riêng màn này.
+/// Mục "Cài đặt": máy đã ghép, thông báo + âm báo, bảo mật, widget màn hình chính, giao diện, và về ứng dụng (bản mới,
+/// chẩn đoán, hướng dẫn, giấy phép). Dùng chung `HomeVm` — máy đã ghép và quyền thông báo là trạng thái của cả app chứ
+/// không riêng màn này.
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
@@ -50,6 +57,9 @@ class SettingsPage extends ConsumerWidget {
     if (context.mounted) say(context, result);
   }
 
+  void _open(BuildContext context, Widget page) =>
+      Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => page));
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = Bow.of(context);
@@ -57,6 +67,8 @@ class SettingsPage extends ConsumerWidget {
     final vm = ref.read(homeVmProvider.notifier);
     final paired = state.pairings.isNotEmpty;
     return ListView(
+      // Đổi ngôn ngữ dựng lại cả cây widget — khoá này giữ chỗ đang cuộn, không thì bấm xong bị nhảy về đầu trang.
+      key: const PageStorageKey('settings'),
       padding: BowScaffold.listPadding(nav: true),
       children: [
         SectionTitle(t('Máy đã ghép', 'Paired machines')),
@@ -92,6 +104,21 @@ class SettingsPage extends ConsumerWidget {
               : t('Đang bật', 'On'),
           subtitleColor: state.notifyDenied ? c.dangerInk : null,
         ),
+        const SizedBox(height: 10),
+        RowTile(
+          icon: 'magic',
+          title: t('Âm báo', 'Sounds'),
+          subtitle: t(
+            'Chờ bạn · Đã xong · Lỗi — mỗi loại một âm',
+            'Waiting · Finished · Failed — one sound each',
+          ),
+          onTap: () => _open(context, const SoundsPage()),
+        ),
+        SectionTitle(t('Bảo mật', 'Security')),
+        SecurityTile(
+          unlockMinutes: ref.watch(unlockMinutesProvider),
+          onUnlockMinutes: ref.read(unlockMinutesProvider.notifier).set,
+        ),
         if (state.canPinWidget && paired) ...[
           SectionTitle(t('Màn hình chính', 'Home screen')),
           PinWidgetTile(onPin: (status) => vm.pinWidget(status: status)),
@@ -101,12 +128,25 @@ class SettingsPage extends ConsumerWidget {
           appearance: ref.watch(appearanceVmProvider),
           onStyle: ref.read(appearanceVmProvider.notifier).setStyle,
           onMode: ref.read(appearanceVmProvider.notifier).setMode,
+          onLanguage: ref.read(appearanceVmProvider.notifier).setLanguage,
         ),
         SectionTitle(t('Về ứng dụng', 'About')),
+        const UpdateTile(),
+        const SizedBox(height: 10),
         RowTile(
-          icon: 'info',
-          title: 'Bow Notify',
-          subtitle: t('Phiên bản $appVersion', 'Version $appVersion'),
+          icon: 'bug',
+          title: t('Chẩn đoán', 'Diagnostics'),
+          subtitle: t(
+            'Không thấy thông báo, thẻ hay tab? Thử lại từng chặng.',
+            'No notifications, cards or tabs? Retry each step.',
+          ),
+          onTap: () => _open(context, const DiagnosticsPage()),
+        ),
+        const SizedBox(height: 10),
+        RowTile(
+          icon: 'book',
+          title: t('Hướng dẫn', 'Guide'),
+          onTap: () => _open(context, const GuidePage()),
         ),
         const SizedBox(height: 10),
         // Phông chữ của theme brutal (và các gói app dùng) có giấy phép đòi kèm nguyên văn khi phát hành.

@@ -74,6 +74,20 @@ class HomeState {
   );
 }
 
+/// Kết quả chẩn đoán của một máy đã ghép: hai chặng mà thông báo / thẻ phải đi qua.
+typedef MachineCheck = ({
+  Pairing pairing,
+
+  /// Đăng ký nhận thông báo đẩy của máy này được (FCM).
+  bool subscribed,
+
+  /// Đọc được thẻ chờ từ database; `null` = máy chỉ gửi thông báo (chưa bật duyệt từ điện thoại) nên không có gì để đọc.
+  bool? database,
+
+  /// Lỗi của lần đọc database (rỗng = không lỗi).
+  String error,
+});
+
 /// ViewModel của màn chính: máy đã ghép, thẻ đang chờ, quyết định gửi đi. Mọi thao tác trả về câu cần nói lại với
 /// người dùng (`null` = không có gì để nói) — View chỉ việc hiện, không tự suy luận.
 class HomeVm extends Notifier<HomeState> {
@@ -332,6 +346,49 @@ class HomeVm extends Notifier<HomeState> {
     } finally {
       if (ref.mounted) state = state.copyWith(busy: false);
     }
+  }
+
+  /// Chẩn đoán (Cài đặt → Chẩn đoán): thử lại hai chặng của TỪNG máy — đăng ký nhận thông báo, đọc thẻ chờ — và báo
+  /// chặng nào hỏng. Cũng cập nhật luôn dấu "chưa đăng ký được" của các máy.
+  Future<List<MachineCheck>> diagnose() async {
+    final results = <MachineCheck>[];
+    for (final pairing in state.pairings) {
+      var subscribed = true;
+      try {
+        await _push.subscribe(pairing.topic);
+      } catch (_) {
+        subscribed = false;
+      }
+      bool? database;
+      var error = '';
+      if (pairing.canApprove) {
+        try {
+          await _remote.fetchPending(pairing);
+          database = true;
+        } catch (e) {
+          database = false;
+          error = '$e';
+        }
+      }
+      results.add((
+        pairing: pairing,
+        subscribed: subscribed,
+        database: database,
+        error: error,
+      ));
+    }
+    if (ref.mounted) {
+      // Máy đã bị bỏ ghép trong lúc chờ thì không tính.
+      final topics = {for (final pairing in state.pairings) pairing.topic};
+      state = state.copyWith(
+        notListening: {
+          for (final check in results)
+            if (!check.subscribed && topics.contains(check.pairing.topic))
+              check.pairing.topic,
+        },
+      );
+    }
+    return results;
   }
 
   /// Bỏ ghép một máy (View đã hỏi lại người dùng). Bỏ đăng ký topic TRƯỚC — không bỏ được thì giữ nguyên, không thì
