@@ -38,8 +38,8 @@ Cần Flutter 3.41.4 (`fvm use` đọc `.fvmrc`).
 2. **Nạp khoá cho bow**: [Firebase Console → Service accounts](https://console.firebase.google.com/project/bow-agent-ai/settings/serviceaccounts/adminsdk)
    → *Generate new private key* → trên web bow mở **Cài đặt → Thông báo điện thoại → Thiết lập**, dán nguyên nội dung
    file JSON vừa tải.
-3. **Ghép máy**: trong app bấm **Quét mã ghép**, đưa camera vào mã QR ở hộp vừa mở. Không quét được thì bấm "Chép
-   mã" trên web rồi bấm nút dán ở góc trên app.
+3. **Ghép máy**: trong app bấm nút quét ở góc trên (lần đầu còn có nút **Quét mã ghép** ngay trong thẻ đầu màn hình),
+   đưa camera vào mã QR ở hộp vừa mở. Không quét được thì bấm "Chép mã" trên web rồi bấm **Dán mã ghép** trong màn quét.
 4. Bấm **Gửi thử** trên web — điện thoại rung là xong. Lần đầu sau khi ghép có thể chậm tới một phút (FCM cần thời
    gian ghi nhận đăng ký topic).
 

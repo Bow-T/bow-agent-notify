@@ -80,36 +80,9 @@ class _HomePageState extends ConsumerState<HomePage>
             'Đưa camera vào mã QR ở web bow: Cài đặt → Thông báo điện thoại.',
             'Point at the QR code in bow: Settings → Phone notifications.',
           ),
+          pasteLabel: t('Dán mã ghép', 'Paste pairing code'),
         ),
       ),
-    );
-    await _pair(raw);
-  }
-
-  /// Nhập mã ghép bằng tay (web bow → "Chép mã"): dùng khi không quét được, vd mở web bow trên chính điện thoại này.
-  /// Ô nhập thường chứ không tự đọc clipboard — iOS hỏi quyền mỗi lần app tự đọc.
-  Future<void> _enterCode() async {
-    final input = TextEditingController();
-    final raw = await showGlassDialog<String>(
-      context,
-      title: t('Dán mã ghép', 'Paste pairing code'),
-      content: TextField(
-        controller: input,
-        autofocus: true,
-        autocorrect: false,
-        enableSuggestions: false,
-        maxLines: 3,
-        style: const TextStyle(fontSize: 14),
-        decoration: const InputDecoration(hintText: 'bowpush://pair?…'),
-      ),
-      actions: (close) => [
-        GlassButton(label: t('Thôi', 'Cancel'), onPressed: () => close(null)),
-        GlassButton(
-          label: t('Ghép', 'Pair'),
-          kind: GlassButtonKind.primary,
-          onPressed: () => close(input.text),
-        ),
-      ],
     );
     await _pair(raw);
   }
@@ -168,28 +141,18 @@ class _HomePageState extends ConsumerState<HomePage>
         if (machine.tabs.isNotEmpty) machine,
     ];
     return BowScaffold(
+      // Ghép máy là việc làm MỘT lần ⇒ chỉ là một nút nhỏ ở thanh trên, không chiếm cả thanh đáy của màn hình.
       action: IconButton(
-        onPressed: state.busy ? null : _enterCode,
-        tooltip: t('Dán mã ghép', 'Paste pairing code'),
-        icon: const Icon3d('clipboard', size: 28),
-      ),
-      bottom: SizedBox(
-        width: double.infinity,
-        child: GlassButton(
-          label: state.busy
-              ? t('Đang ghép…', 'Pairing…')
-              : t('Quét mã ghép', 'Scan pairing code'),
-          // Icon phẳng màu trắng, không phải 3D: hình 3D có màu riêng nên chìm trên nền lam của nút (luật của bộ icon web).
-          icon: Icons.qr_code_scanner_rounded,
-          kind: GlassButtonKind.primary,
-          large: true,
-          onPressed: state.busy ? null : _scan,
-        ),
+        onPressed: state.busy ? null : _scan,
+        tooltip: t('Quét mã ghép', 'Scan pairing code'),
+        icon: const Icon3d('camera', size: 28),
       ),
       children: [
         StatusCard(
           machines: state.pairings.length,
           active: paired && !state.notifyDenied,
+          busy: state.busy,
+          onScan: _scan,
         ),
         if (state.notifyDenied) ...[
           const SizedBox(height: 12),

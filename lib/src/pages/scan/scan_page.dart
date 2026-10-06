@@ -2,16 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../components/glass.dart';
+import '../../components/glass_button.dart';
+import '../../components/glass_dialog.dart';
 import '../../components/icon3d.dart';
 import '../../models/pairing.dart';
 import '../../themes/bow_theme.dart';
+import '../../utils/l10n.dart';
 
 /// Quét mã QR ghép máy. Trả chuỗi mã ghép qua `Navigator.pop` ngay khi thấy một mã của bow; QR khác bị bỏ qua.
+/// Không quét được (mở web bow trên chính điện thoại này, máy không có camera) thì dán mã bằng nút ở dưới.
 class ScanPage extends StatefulWidget {
-  const ScanPage({super.key, required this.title, required this.hint});
+  const ScanPage({
+    super.key,
+    required this.title,
+    required this.hint,
+    required this.pasteLabel,
+  });
 
   final String title;
   final String hint;
+  final String pasteLabel;
 
   @override
   State<ScanPage> createState() => _ScanPageState();
@@ -21,8 +31,43 @@ class _ScanPageState extends State<ScanPage> {
   /// Camera báo cùng một mã nhiều khung liên tiếp — chỉ thoát trang một lần.
   bool _found = false;
 
+  /// Hộp dán mã đang mở: camera thấy mã lúc này mà `pop` thì đóng nhầm cái hộp chứ không phải trang.
+  bool _entering = false;
+
+  /// Nhập mã ghép bằng tay (web bow → "Chép mã"). Ô nhập thường chứ không tự đọc clipboard — iOS hỏi quyền mỗi lần
+  /// app tự đọc. Mã sai vẫn trả về: màn chính là nơi nói "đây không phải mã ghép của bow".
+  Future<void> _enterCode() async {
+    final input = TextEditingController();
+    _entering = true;
+    final raw = await showGlassDialog<String>(
+      context,
+      title: widget.pasteLabel,
+      content: TextField(
+        controller: input,
+        autofocus: true,
+        autocorrect: false,
+        enableSuggestions: false,
+        maxLines: 3,
+        style: const TextStyle(fontSize: 14),
+        decoration: const InputDecoration(hintText: 'bowpush://pair?…'),
+      ),
+      actions: (close) => [
+        GlassButton(label: t('Thôi', 'Cancel'), onPressed: () => close(null)),
+        GlassButton(
+          label: t('Ghép', 'Pair'),
+          kind: GlassButtonKind.primary,
+          onPressed: () => close(input.text),
+        ),
+      ],
+    );
+    _entering = false;
+    if (raw == null || raw.trim().isEmpty || !mounted || _found) return;
+    _found = true;
+    Navigator.of(context).pop(raw);
+  }
+
   void _onDetect(BarcodeCapture capture) {
-    if (_found) return;
+    if (_found || _entering) return;
     for (final barcode in capture.barcodes) {
       final raw = barcode.rawValue;
       if (raw != null && Pairing.parse(raw) != null) {
@@ -76,15 +121,26 @@ class _ScanPageState extends State<ScanPage> {
                   child: SafeArea(
                     minimum: const EdgeInsets.all(16),
                     child: Glass(
-                      child: Row(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const Icon3d('camera', size: 30),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              widget.hint,
-                              style: TextStyle(color: c.ink, height: 1.4),
-                            ),
+                          Row(
+                            children: [
+                              const Icon3d('camera', size: 30),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  widget.hint,
+                                  style: TextStyle(color: c.ink, height: 1.4),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          GlassButton(
+                            label: widget.pasteLabel,
+                            onPressed: _enterCode,
                           ),
                         ],
                       ),
