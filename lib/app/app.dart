@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../src/pages/home/home_page.dart';
+import '../src/pages/shell/shell_page.dart';
 import '../src/pages/setup/setup_needed_page.dart';
 import '../src/themes/bow_theme.dart';
 
@@ -18,7 +18,7 @@ class BowNotifyApp extends StatelessWidget {
       theme: bowTheme(Brightness.light),
       darkTheme: bowTheme(Brightness.dark),
       home: firebaseError == null
-          ? const HomePage()
+          ? const ShellPage()
           : SetupNeededPage(error: firebaseError!),
     );
   }

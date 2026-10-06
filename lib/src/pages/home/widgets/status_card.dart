@@ -1,90 +1,111 @@
 import 'package:flutter/material.dart';
 
 import '../../../components/glass.dart';
-import '../../../components/glass_button.dart';
 import '../../../components/icon3d.dart';
-import '../../../components/listening_mark.dart';
 import '../../../themes/bow_theme.dart';
 import '../../../utils/l10n.dart';
 
-/// Tấm đầu màn hình: đang nghe mấy máy (logo có vòng sóng khi đang nghe), hoặc hướng dẫn ghép máy đầu tiên.
-class StatusCard extends StatelessWidget {
-  const StatusCard({
+/// Dòng trạng thái đầu mục Hôm nay: đang nghe mấy máy, mấy tab đang chạy. Có máy chưa đăng ký nhận thông báo được
+/// thì dòng chuyển đỏ và bấm vào là mở Cài đặt (nơi ghi rõ máy nào).
+class StatusStrip extends StatelessWidget {
+  const StatusStrip({
     super.key,
-    required this.machines,
-    required this.active,
-    required this.onScan,
-    this.busy = false,
+    required this.hosts,
+    required this.notListening,
+    required this.runningTabs,
+    required this.onFix,
   });
 
-  /// Số máy đã ghép.
-  final int machines;
+  /// Tên các máy đã ghép.
+  final List<String> hosts;
 
-  /// Đang thật sự nghe được (có máy và quyền thông báo chưa bị tắt).
-  final bool active;
+  /// Số máy mà lần đăng ký nhận thông báo gần nhất hỏng.
+  final int notListening;
+  final int runningTabs;
 
-  /// Mở màn quét mã. Chỉ hiện thành nút khi CHƯA ghép máy nào — đã có máy thì nút quét nhỏ ở thanh trên là đủ.
-  final VoidCallback onScan;
-
-  /// Đang ghép một máy (khoá nút).
-  final bool busy;
+  /// Mở Cài đặt → Máy đã ghép.
+  final VoidCallback onFix;
 
   @override
   Widget build(BuildContext context) {
     final c = Bow.of(context);
-    final paired = machines > 0;
+    final broken = notListening > 0;
+    final color = broken ? c.danger : c.ok;
     return Glass(
-      padding: const EdgeInsets.fromLTRB(12, 14, 18, 14),
-      child: Row(
-        children: [
-          ListeningMark(active: active),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      radius: 18,
+      padding: EdgeInsets.zero,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: broken ? onFix : null,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            child: Row(
               children: [
-                Text(
-                  paired
-                      ? t(
-                          'Đang nghe $machines máy',
-                          'Listening to $machines machine${machines == 1 ? '' : 's'}',
-                        )
-                      : t('Chưa ghép máy nào', 'Nothing paired yet'),
-                  style: TextStyle(
-                    color: c.ink,
-                    fontSize: 19,
-                    fontWeight: FontWeight.w700,
+                Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.25),
+                        spreadRadius: 3,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  paired
-                      ? t(
-                          'Agent chờ bạn duyệt, hỏi bạn, chạy xong hay lỗi — điện thoại báo ngay, mỗi việc một âm riêng.',
-                          'Agent waiting, asking, finished or failed — your phone tells you, each with its own sound.',
-                        )
-                      : t(
-                          'Trên web bow mở Cài đặt → Thông báo điện thoại rồi quét mã QR ở đó.',
-                          'In bow open Settings → Phone notifications and scan the QR code there.',
-                        ),
-                  style: TextStyle(color: c.muted, fontSize: 13.5, height: 1.4),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      text: broken
+                          ? t(
+                              'Chưa nghe được $notListening máy',
+                              'Not listening to $notListening machine${notListening == 1 ? '' : 's'}',
+                            )
+                          : t(
+                              'Đang nghe ${hosts.length} máy',
+                              'Listening to ${hosts.length} machine${hosts.length == 1 ? '' : 's'}',
+                            ),
+                      style: TextStyle(
+                        color: broken ? c.danger : c.ink,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      children: [
+                        if (broken)
+                          TextSpan(
+                            text: t(' · xem Cài đặt', ' · see Settings'),
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          )
+                        else if (hosts.length == 1 && hosts.first.isNotEmpty)
+                          TextSpan(
+                            text: ' · ${hosts.first}',
+                            style: TextStyle(
+                              color: c.muted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                if (!paired) ...[
-                  const SizedBox(height: 12),
-                  GlassButton(
-                    label: busy
-                        ? t('Đang ghép…', 'Pairing…')
-                        : t('Quét mã ghép', 'Scan pairing code'),
-                    // Icon phẳng màu trắng, không phải 3D: hình 3D có màu riêng nên chìm trên nền lam của nút.
-                    icon: Icons.qr_code_scanner_rounded,
-                    kind: GlassButtonKind.primary,
-                    onPressed: busy ? null : onScan,
+                if (runningTabs > 0) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    t('$runningTabs tab chạy', '$runningTabs running'),
+                    style: TextStyle(color: c.muted, fontSize: 13),
                   ),
                 ],
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -110,6 +131,56 @@ class NotifyDeniedCard extends StatelessWidget {
                 'Notifications are off for this app — enable them in the phone settings.',
               ),
               style: TextStyle(color: c.ink, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Mục Hôm nay lúc không có thẻ nào: nói rõ là hết việc (hoặc vì sao thẻ không bao giờ hiện ở đây).
+class NothingWaitingCard extends StatelessWidget {
+  const NothingWaitingCard({super.key, required this.canApprove});
+
+  /// Có ít nhất một máy cho duyệt từ điện thoại này.
+  final bool canApprove;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Bow.of(context);
+    return Glass(
+      padding: const EdgeInsets.fromLTRB(14, 14, 16, 14),
+      child: Row(
+        children: [
+          const Icon3d('success', size: 36),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  t('Không có gì chờ bạn', 'Nothing is waiting for you'),
+                  style: TextStyle(
+                    color: c.ink,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  canApprove
+                      ? t(
+                          'Agent cần duyệt hay hỏi gì, thẻ sẽ hiện ở đây.',
+                          'When an agent needs approval or asks something, the card shows up here.',
+                        )
+                      : t(
+                          'Máy đã ghép mới chỉ gửi thông báo. Muốn duyệt tại đây: bật "Duyệt từ điện thoại" trên web bow rồi quét lại mã.',
+                          'The paired machine only sends notifications. To approve here, turn on "Approve from phone" in bow and scan the code again.',
+                        ),
+                  style: TextStyle(color: c.muted, fontSize: 13, height: 1.4),
+                ),
+              ],
             ),
           ),
         ],

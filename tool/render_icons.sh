@@ -7,7 +7,7 @@ tmp=$(mktemp -d)
 
 # Icon trong app: hiện tối đa ~48 px logic ⇒ 144 px là đủ nét ở màn 3x.
 mkdir -p assets/icons
-for name in agent shield chat success error bolt warning trash camera logo_mark; do
+for name in agent bell shield chat success error bolt warning trash camera qr layers activity gear info logo_mark; do
   rsvg-convert -w 144 -h 144 "tool/icons/$name.svg" -o "assets/icons/$name.png"
 done
 

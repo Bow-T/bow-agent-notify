@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../components/glass.dart';
-import '../../../components/icon3d.dart';
-import '../../../models/received.dart';
-import '../../../themes/bow_theme.dart';
+import 'glass.dart';
+import 'icon3d.dart';
+import '../models/received.dart';
+import '../themes/bow_theme.dart';
 
 /// "Vừa nhận": các thông báo tới lúc app đang mở — mới nhất trước.
 class RecentList extends StatelessWidget {

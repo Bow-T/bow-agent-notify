@@ -7,14 +7,16 @@ import '../../../components/section_title.dart';
 import '../../../models/mirror.dart';
 import '../../../themes/bow_theme.dart';
 import '../../../utils/l10n.dart';
-import '../../tabs/tab_page.dart';
+import '../tab_page.dart';
 
-/// "Tab trên máy": thanh tab của một trang bow — tab nào đang chạy, tab nào đang chờ bạn. Chạm vào một tab để đọc
-/// hội thoại của nó; máy cho phép thì có nút giao việc mới (mở tab mới).
+/// Thanh tab của MỘT trang bow trên máy — tab nào đang chạy, tab nào đang chờ bạn. Chạm vào một tab để đọc hội thoại
+/// của nó. [tabs] là phần đang hiện (sau bộ lọc của mục Tab); [onNewTask] khác null thì có nút giao việc mới ngay
+/// dưới danh sách.
 class MachineTabsSection extends StatelessWidget {
   const MachineTabsSection({
     super.key,
     required this.machine,
+    required this.tabs,
     required this.showHost,
     required this.onOpen,
     required this.onNewTask,
@@ -22,25 +24,28 @@ class MachineTabsSection extends StatelessWidget {
 
   final MachineTabs machine;
 
+  /// Các tab của [machine] đang được hiện.
+  final List<MirrorTab> tabs;
+
   /// Ghép nhiều máy / nhiều cổng thì tiêu đề ghi rõ là máy nào.
   final bool showHost;
   final void Function(MirrorTab tab) onOpen;
 
-  /// Mở màn "Giao việc mới" cho trang bow này — nút chỉ hiện khi máy cho phép và trang web còn sống.
-  final VoidCallback onNewTask;
+  /// Mở màn "Giao việc mới" cho trang bow này. `null` = không vẽ nút ở đây (máy không cho, trang web đã im, hoặc mục
+  /// Tab đã có một nút nổi chung).
+  final VoidCallback? onNewTask;
 
   @override
   Widget build(BuildContext context) {
     final c = Bow.of(context);
-    final title = t('Tab trên máy', 'Tabs on the machine');
+    final title = t('Trang bow', 'bow page');
     final stale = machine.stale(DateTime.now());
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionTitle(
-          showHost
-              ? '$title · ${machine.pairing.host}:${machine.port}'
-              : '$title · ${machine.tabs.length}',
+          '${machine.pairing.host.isEmpty ? title : machine.pairing.host}'
+          '${showHost ? ' · ${machine.port}' : ''} · ${machine.tabs.length} tab',
         ),
         if (stale)
           Padding(
@@ -51,7 +56,7 @@ class MachineTabsSection extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Column(
             children: [
-              for (final (index, tab) in machine.tabs.indexed) ...[
+              for (final (index, tab) in tabs.indexed) ...[
                 if (index > 0)
                   Divider(height: 1, indent: 56, color: c.hairline),
                 InkWell(
@@ -126,8 +131,7 @@ class MachineTabsSection extends StatelessWidget {
             ],
           ),
         ),
-        // Trang web đã im thì không: lệnh gửi đi sẽ không ai nhận.
-        if (machine.canNew && !stale)
+        if (onNewTask != null)
           Padding(
             padding: const EdgeInsets.only(top: 10),
             child: GlassButton(
