@@ -30,7 +30,7 @@ class StatusStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Bow.of(context);
     final broken = notListening > 0;
-    final color = broken ? c.danger : c.ok;
+    final color = broken ? c.dangerInk : c.ok;
     return Glass(
       radius: 18,
       padding: EdgeInsets.zero,
@@ -38,7 +38,7 @@ class StatusStrip extends StatelessWidget {
         type: MaterialType.transparency,
         child: InkWell(
           onTap: broken ? onFix : null,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: c.radius(18),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             child: Row(
@@ -71,7 +71,7 @@ class StatusStrip extends StatelessWidget {
                               'Listening to ${hosts.length} machine${hosts.length == 1 ? '' : 's'}',
                             ),
                       style: TextStyle(
-                        color: broken ? c.danger : c.ink,
+                        color: broken ? c.dangerInk : c.ink,
                         fontSize: 14.5,
                         fontWeight: FontWeight.w700,
                       ),

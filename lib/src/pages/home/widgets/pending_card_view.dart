@@ -105,7 +105,7 @@ class _PendingCardViewState extends State<PendingCardView> {
                 Text(
                   t('Rủi ro', 'Risky'),
                   style: TextStyle(
-                    color: c.danger,
+                    color: c.dangerInk,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                   ),
@@ -123,8 +123,8 @@ class _PendingCardViewState extends State<PendingCardView> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: c.well,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: c.hairline),
+                borderRadius: c.radius(12),
+                border: Border.all(color: c.hairline, width: c.line),
               ),
               child: SingleChildScrollView(
                 // Lời agent: mở ra ở CUỐI (nơi agent mời trả lời), cuộn lên để đọc phần trước.
@@ -159,7 +159,7 @@ class _PendingCardViewState extends State<PendingCardView> {
               const SizedBox(height: 6),
               for (final option in q.options)
                 InkWell(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: c.radius(12),
                   onTap: widget.busy ? null : () => _toggle(q, option.label),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -180,7 +180,9 @@ class _PendingCardViewState extends State<PendingCardView> {
                               Icons.radio_button_unchecked_rounded,
                           },
                           size: 22,
-                          color: _picked(q, option.label) ? c.accent : c.muted,
+                          color: _picked(q, option.label)
+                              ? c.accentInk
+                              : c.muted,
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -237,6 +239,9 @@ class _PendingCardViewState extends State<PendingCardView> {
                     label: isQuestion
                         ? t('Bỏ qua', 'Skip')
                         : t('Từ chối', 'Deny'),
+                    kind: isQuestion
+                        ? GlassButtonKind.plain
+                        : GlassButtonKind.deny,
                     onPressed: onDecide == null
                         ? null
                         : () => onDecide(
@@ -254,7 +259,9 @@ class _PendingCardViewState extends State<PendingCardView> {
                         : t('Cho phép', 'Allow'),
                     // Vân tay = icon phẳng trắng trên nền lam (hình 3D chìm trên nền màu nhấn).
                     icon: card.risky ? Icons.fingerprint_rounded : null,
-                    kind: GlassButtonKind.primary,
+                    kind: isQuestion
+                        ? GlassButtonKind.primary
+                        : GlassButtonKind.allow,
                     onPressed: onDecide == null || (isQuestion && !answered)
                         ? null
                         : () => onDecide(

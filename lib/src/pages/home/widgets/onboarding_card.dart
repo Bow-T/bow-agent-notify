@@ -68,9 +68,10 @@ class OnboardingCard extends StatelessWidget {
                 'Cannot scan? Paste the pairing code',
               ),
               style: TextStyle(
-                color: c.accent,
+                color: c.accentInk,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
+                decoration: c.isBrutal ? TextDecoration.underline : null,
               ),
             ),
           ),
@@ -115,14 +116,19 @@ class PairingSteps extends StatelessWidget {
                     width: 24,
                     height: 24,
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: c.accent,
-                      shape: BoxShape.circle,
-                    ),
+                    decoration: c.isBrutal
+                        ? BoxDecoration(
+                            color: c.accent,
+                            border: Border.all(color: c.ink, width: c.line),
+                          )
+                        : BoxDecoration(
+                            color: c.accent,
+                            shape: BoxShape.circle,
+                          ),
                     child: Text(
                       '${index + 1}',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: c.onAccent,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w800,
                       ),

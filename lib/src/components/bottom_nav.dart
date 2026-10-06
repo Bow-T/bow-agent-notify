@@ -7,7 +7,8 @@ import 'icon3d.dart';
 /// Một mục của thanh điều hướng dưới. `badge` > 0 thì hiện chấm đỏ kèm số (thẻ đang chờ).
 typedef NavItem = ({String icon, String label, int badge});
 
-/// Thanh điều hướng dưới: một viên kính nổi, mỗi mục một icon 3D + nhãn; mục đang mở có nền màu nhấn nhạt.
+/// Thanh điều hướng dưới, nổi trên nội dung: mỗi mục một icon 3D + nhãn. Kính: một viên kính, mục đang mở có nền màu
+/// nhấn nhạt. Brutal: một thanh thẻ viền mực, mục đang mở là KHỐI màu nhấn (như nav của web).
 class BowBottomNav extends StatelessWidget {
   const BowBottomNav({
     super.key,
@@ -64,15 +65,20 @@ class _NavButton extends StatelessWidget {
         type: MaterialType.transparency,
         child: InkWell(
           onTap: onTap,
-          customBorder: const StadiumBorder(),
+          customBorder: c.isBrutal ? null : const StadiumBorder(),
           child: Container(
             height: 54,
-            decoration: selected
+            decoration: !selected
+                ? null
+                : c.isBrutal
                 ? BoxDecoration(
+                    color: c.accent,
+                    border: Border.all(color: c.ink, width: c.line),
+                  )
+                : BoxDecoration(
                     color: c.accent.withValues(alpha: c.isDark ? 0.26 : 0.13),
                     borderRadius: BorderRadius.circular(27),
-                  )
-                : null,
+                  ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -91,7 +97,11 @@ class _NavButton extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: selected ? c.accent : c.muted,
+                    color: !selected
+                        ? c.muted
+                        : c.isBrutal
+                        ? c.onAccent
+                        : c.accent,
                     fontSize: 10.5,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                   ),
@@ -120,13 +130,16 @@ class _Badge extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: c.danger,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: Colors.white, width: 1.5),
+        borderRadius: c.radius(9),
+        border: Border.all(
+          color: c.isBrutal ? c.ink : Colors.white,
+          width: 1.5,
+        ),
       ),
       child: Text(
         count > 99 ? '99+' : '$count',
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: c.onDanger,
           fontSize: 10,
           height: 1,
           fontWeight: FontWeight.w800,

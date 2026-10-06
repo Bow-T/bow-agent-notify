@@ -37,7 +37,10 @@ class MarkdownText extends StatelessWidget {
         strong: bold,
         em: body.copyWith(fontStyle: FontStyle.italic),
         del: body.copyWith(decoration: TextDecoration.lineThrough),
-        a: body.copyWith(color: c.accent),
+        a: body.copyWith(
+          color: c.accentInk,
+          decoration: c.isBrutal ? TextDecoration.underline : null,
+        ),
         h1: bold.copyWith(fontSize: 17),
         h2: bold.copyWith(fontSize: 16),
         h3: bold.copyWith(fontSize: 15),
@@ -51,7 +54,7 @@ class MarkdownText extends StatelessWidget {
         codeblockPadding: const EdgeInsets.all(10),
         codeblockDecoration: BoxDecoration(
           color: c.well,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: c.radius(10),
         ),
         blockquote: body.copyWith(color: c.muted),
         blockquotePadding: const EdgeInsets.fromLTRB(12, 4, 8, 4),

@@ -42,7 +42,7 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: bowTheme(Brightness.light),
+          theme: bowTheme(Bow.light),
           home: const Scaffold(
             body: MarkdownText(
               '- **DULB-50, xếp hàng**: chưa bắt đầu\n- dấu `*` chờ designer',

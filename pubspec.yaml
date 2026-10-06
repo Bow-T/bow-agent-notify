@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.10.0+15
+version: 1.11.0+16
 
 environment:
   sdk: ^3.11.1
@@ -70,6 +70,25 @@ flutter:
   # Icon 3D của web bow, dựng sẵn bằng tool/render_icons.sh.
   assets:
     - assets/icons/
+    # Giấy phép của hai phông chữ dưới đây — hiện ở Cài đặt → Giấy phép mã nguồn mở.
+    - assets/fonts/OFL-SpaceGrotesk.txt
+    - assets/fonts/OFL-SpaceMono.txt
+
+  # Phông của theme brutal (như web bow). Bản rút gọn Latin + tiếng Việt lấy từ Google Fonts; ký tự ngoài bộ đó rơi về
+  # phông của máy.
+  fonts:
+    - family: Space Grotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-Regular.ttf
+        - asset: assets/fonts/SpaceGrotesk-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/SpaceGrotesk-Bold.ttf
+          weight: 700
+    - family: Space Mono
+      fonts:
+        - asset: assets/fonts/SpaceMono-Regular.ttf
+        - asset: assets/fonts/SpaceMono-Bold.ttf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:

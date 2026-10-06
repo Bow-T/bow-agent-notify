@@ -54,7 +54,7 @@ class _ScanPageState extends State<ScanPage> {
   Widget build(BuildContext context) {
     // Hình camera gần như luôn tối ⇒ lớp phủ dùng bản TỐI của kính, bất kể máy đang ở chế độ sáng.
     return Theme(
-      data: bowTheme(Brightness.dark),
+      data: bowTheme(Bow.dark),
       child: Builder(
         builder: (context) {
           final c = Bow.of(context);

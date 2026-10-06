@@ -73,7 +73,7 @@ class MachineTabsSection extends StatelessWidget {
                                   padding: const EdgeInsets.all(5),
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.4,
-                                    color: c.accent,
+                                    color: c.accentInk,
                                   ),
                                 )
                               : Icon3d(
@@ -115,7 +115,12 @@ class MachineTabsSection extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: tab.pending > 0 ? c.accent : c.muted,
+                                  color: tab.pending > 0
+                                      ? c.accentInk
+                                      : c.muted,
+                                  fontWeight: tab.pending > 0 && c.isBrutal
+                                      ? FontWeight.w700
+                                      : null,
                                   fontSize: 12.5,
                                 ),
                               ),

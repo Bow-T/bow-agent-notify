@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../themes/bow_theme.dart';
 
-/// Tấm kính: làm mờ thứ phía sau → nhuộm → ánh sáng đổ từ trên xuống, viền bắt sáng, bóng đổ mềm.
+/// Tấm nền của mọi thẻ. Theme kính: làm mờ thứ phía sau → nhuộm → ánh sáng đổ từ trên xuống, viền bắt sáng, bóng đổ
+/// mềm. Theme brutal: khối ĐẶC màu thẻ, viền mực dày, bóng cứng, góc vuông ([radius] bị bỏ qua).
 class Glass extends StatelessWidget {
   const Glass({
     super.key,
@@ -18,12 +19,22 @@ class Glass extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double radius;
 
-  /// Nhuộm thêm một màu (thẻ cảnh báo).
+  /// Nhuộm thêm một màu (thẻ cảnh báo). Brutal pha màu này lên nền thẻ đặc.
   final Color? tint;
 
   @override
   Widget build(BuildContext context) {
     final c = Bow.of(context);
+    if (c.isBrutal) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: tint == null ? c.surface : Color.alphaBlend(tint!, c.surface),
+          border: Border.all(color: c.ink, width: c.line),
+          boxShadow: c.hardShadow(4),
+        ),
+        child: Padding(padding: padding, child: child),
+      );
+    }
     final shape = BorderRadius.circular(radius);
     return DecoratedBox(
       decoration: BoxDecoration(

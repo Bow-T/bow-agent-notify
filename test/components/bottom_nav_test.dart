@@ -7,7 +7,7 @@ Future<List<int>> _pump(WidgetTester tester, {required int badge}) async {
   final taps = <int>[];
   await tester.pumpWidget(
     MaterialApp(
-      theme: bowTheme(Brightness.light),
+      theme: bowTheme(Bow.light),
       home: Scaffold(
         body: BowBottomNav(
           index: 0,

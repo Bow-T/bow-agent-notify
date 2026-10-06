@@ -37,7 +37,7 @@ class RowTile extends StatelessWidget {
         type: MaterialType.transparency,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(radius),
+          borderRadius: c.radius(radius),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
             child: Row(

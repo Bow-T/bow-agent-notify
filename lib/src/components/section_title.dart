@@ -21,26 +21,30 @@ class SectionTitle extends StatelessWidget {
           Expanded(
             child: Text(
               text.toUpperCase(),
-              style: TextStyle(
-                color: c.muted,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
+              style: c.label(
+                TextStyle(
+                  color: c.isBrutal ? c.ink : c.muted,
+                  fontSize: c.isBrutal ? 11.5 : 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                ),
               ),
             ),
           ),
           if (action case final action?)
             InkWell(
               onTap: onAction,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: c.radius(8),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 child: Text(
                   action,
                   style: TextStyle(
-                    color: c.accent,
+                    color: c.accentInk,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
+                    // Brutal không có màu riêng cho lối tắt (chữ nhấn cũng là mực) ⇒ gạch chân như link của web.
+                    decoration: c.isBrutal ? TextDecoration.underline : null,
                   ),
                 ),
               ),
