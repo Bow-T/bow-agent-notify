@@ -9,6 +9,7 @@ import '../activity/activity_page.dart';
 import '../home/home_page.dart';
 import '../home/home_vm.dart';
 import '../settings/settings_page.dart';
+import '../settings/update_vm.dart';
 import '../tabs/tabs_page.dart';
 import '../tabs/tabs_vm.dart';
 import '../tabs/typing_gate.dart';
@@ -31,6 +32,10 @@ class _ShellPageState extends ConsumerState<ShellPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Hỏi bản mới sau khung hình đầu (provider không được đổi trong lúc cây widget đang dựng).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(updateVmProvider.notifier).autoCheck();
+    });
   }
 
   @override
@@ -46,6 +51,7 @@ class _ShellPageState extends ConsumerState<ShellPage>
     if (state == AppLifecycleState.resumed) {
       home.resumed();
       tabs.resumed();
+      ref.read(updateVmProvider.notifier).autoCheck();
     } else {
       home.paused();
       tabs.paused();
@@ -59,6 +65,7 @@ class _ShellPageState extends ConsumerState<ShellPage>
     final tab = ref.watch(shellVmProvider);
     final busy = ref.watch(homeVmProvider.select((s) => s.busy));
     final pending = ref.watch(homeVmProvider.select((s) => s.pending.length));
+    final update = ref.watch(updateVmProvider.select((s) => s.offer));
     final shell = ref.read(shellVmProvider.notifier);
     return PopScope(
       // Nút Back của Android ở mục khác: về Hôm nay trước, ở Hôm nay mới thoát app.
@@ -80,7 +87,12 @@ class _ShellPageState extends ConsumerState<ShellPage>
             (icon: 'bell', label: t('Hôm nay', 'Today'), badge: pending),
             (icon: 'layers', label: t('Tab', 'Tabs'), badge: 0),
             (icon: 'activity', label: t('Hoạt động', 'Activity'), badge: 0),
-            (icon: 'gear', label: t('Cài đặt', 'Settings'), badge: 0),
+            // Chấm ở Cài đặt = có bản mới của app (gạt dải báo ở Hôm nay đi thì chấm vẫn còn).
+            (
+              icon: 'gear',
+              label: t('Cài đặt', 'Settings'),
+              badge: update ? 1 : 0,
+            ),
           ],
         ),
         body: IndexedStack(

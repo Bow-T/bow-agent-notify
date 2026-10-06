@@ -6,6 +6,8 @@ import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterFragmentActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 
 // FlutterFragmentActivity (không phải FlutterActivity): hộp xác thực vân tay của local_auth cần một FragmentActivity.
 class MainActivity : FlutterFragmentActivity() {
@@ -19,6 +21,17 @@ class MainActivity : FlutterFragmentActivity() {
         Triple("bow_done", "Bow · đã xong", R.raw.bow_done),
         Triple("bow_fail", "Bow · lượt chạy lỗi", R.raw.bow_fail),
     )
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+        // Cập nhật trong app: Dart tải APK xong thì nhờ đây mở trình cài đặt của máy (AppUpdate.kt).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, AppUpdate.CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "install" -> AppUpdate.install(this, call.argument<String>("path"), result)
+                else -> result.notImplemented()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

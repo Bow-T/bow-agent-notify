@@ -60,10 +60,10 @@ Thanh điều hướng dưới có bốn mục; thanh trên chỉ có logo và n
 
 | Mục | Có gì |
 | --- | --- |
-| **Hôm nay** | Thứ đang cần bạn: thẻ chờ duyệt, câu agent hỏi, lời mời trả lời, và vài thông báo vừa tới. Số thẻ đang chờ hiện trên thanh dưới ở mọi mục. Chưa ghép máy nào thì đây là màn hướng dẫn ghép. |
+| **Hôm nay** | Thứ đang cần bạn: thẻ chờ duyệt, câu agent hỏi, lời mời trả lời, và vài thông báo vừa tới. Số thẻ đang chờ hiện trên thanh dưới ở mọi mục. Chưa ghép máy nào thì đây là màn hướng dẫn ghép. App có bản mới thì đầu mục có dải báo kèm nút **Cập nhật**. |
 | **Tab** | Thanh tab của trang bow trên máy (lọc: tất cả / đang chạy / chờ bạn), chạm để đọc hội thoại và gõ tiếp, nút *Giao việc mới*. |
 | **Hoạt động** | Mọi thông báo đã tới từ lúc mở app. |
-| **Cài đặt** | Máy đã ghép (ghép thêm / bỏ ghép), thông báo + âm báo, bảo mật, widget màn hình chính, giao diện (hai theme, ngôn ngữ), và về ứng dụng (kiểm tra bản mới, chẩn đoán, hướng dẫn, giấy phép) — xem mục dưới. |
+| **Cài đặt** | Máy đã ghép (ghép thêm / bỏ ghép), thông báo + âm báo, bảo mật, widget màn hình chính, giao diện (hai theme, ngôn ngữ), và về ứng dụng (cập nhật ngay trong app, chẩn đoán, hướng dẫn, giấy phép) — xem mục dưới. |
 
 ### Các mục của Cài đặt
 
@@ -76,9 +76,21 @@ Thanh điều hướng dưới có bốn mục; thanh trên chỉ có logo và n
 - **Ngôn ngữ** (trong Giao diện): Theo máy / Tiếng Việt / English. `t()` đọc biến `forcedLanguage` do `AppearanceVm` đặt;
   đổi là cả cây widget dựng lại (chữ tính lúc build). Phần chạy nền tự đọc lựa chọn đã lưu, nên chữ trên thông báo có nút
   và widget cũng theo.
-- **Kiểm tra bản mới**: CHỈ khi bấm mới hỏi GitHub Releases (`constants/links.dart` → `releasesRepo`); app không tự gọi ra
-  ngoài. Có bản mới thì nút thành **Tải về** — Android mở link APK, iPhone mở trang phát hành. Ai phát hành app ở repo
-  khác thì đổi `releasesRepo`.
+- **Cập nhật trong app** (`UpdateVm` + `UpdateService`): mỗi lần mở app (và khi trở lại app sau 6 giờ) app hỏi GitHub
+  Releases bản mới nhất (`constants/links.dart` → `releasesRepo`). Có bản mới thì báo ở ba chỗ — dải báo đầu mục Hôm nay
+  (gạt đi được tới lần mở app sau), chấm ở mục Cài đặt, và dòng **Bow Notify** kèm ghi chú "có gì mới". Bấm **Cập nhật**
+  (Android): app tải APK về vùng riêng của nó, kiểm đủ kích thước + khớp mã băm SHA-256 GitHub khai, rồi mở hộp cài đặt
+  của máy; huỷ ở hộp đó thì bấm **Cài ngay** là mở lại, không tải lại. Lần đầu Android hỏi bật "cho phép cài từ nguồn
+  này" cho Bow Notify. Cài xong Android **đóng app** để thay bản mới — mở lại là bản mới. iPhone không cài được APK nên
+  nút là **Tải về** — mở trang phát hành.
+  - Mạng đứt / đổi wifi ↔ 4G giữa lúc tải: app tự tải TIẾP phần còn lại (HTTP `Range`, tối đa ba lượt cho một lần
+    bấm); vẫn hỏng thì phần đã tải được giữ, bấm lại là đi tiếp chứ không về 0. Mã băm luôn tính trên cả file.
+  - App **không tự cài**: tải chỉ bắt đầu khi bấm, và Android luôn hỏi lại ở hộp của máy. Android cũng chỉ cho cài đè
+    khi bản mới ký **cùng khoá** với bản đang cài — bản ký khoá khác bị từ chối, app nói rõ và mời tải bằng trình duyệt.
+  - Không muốn app tự hỏi GitHub: chọn **Chỉ khi bấm** ngay dưới dòng đó (`update_auto`). Lời hỏi không mang gì về
+    người dùng — chỉ là một lệnh GET công khai tới `api.github.com`.
+  - Địa chỉ tải do app tự ghép từ tag (`apkUri`), không lấy link trong câu trả lời của API; tag không phải số phiên
+    bản thì bị bỏ. Ai phát hành app ở repo khác thì đổi `releasesRepo`.
 - **Chẩn đoán**: thử lại từng chặng của từng máy đã ghép — đăng ký nhận thông báo, đọc thẻ chờ, trang bow có đang báo về
   không — và chỉ ra chặng hỏng (`HomeVm.diagnose`). Android có thêm nút dựng một thông báo thử ngay trên máy.
 - **Hướng dẫn**: mỗi việc app làm được một thẻ ngắn, kèm thứ phải bật ở web bow.
@@ -281,9 +293,14 @@ cp build/app/outputs/flutter-apk/app-release.apk /tmp/bow-notify.apk     # tên 
 gh release create v<phiên bản> /tmp/bow-notify.apk --title "Bow Notify <phiên bản>" --notes "<có gì mới>"
 ```
 
+Máy đã cài app (từ 1.13.0) tự thấy bản này ở lần mở app kế tiếp — với ba điều kiện: tag dạng `v<phiên bản>` LỚN hơn
+bản đang cài, file đính kèm tên đúng `bow-notify.apk`, và bản phát hành được đánh dấu *latest* (mặc định của
+`gh release create`; bản nháp / pre-release thì app không thấy). `--notes` là thứ hiện ở "Có gì mới" trong app.
+
 Bản phát hành đang ký bằng khoá debug của máy build (`android/app/build.gradle.kts`). Cài lần đầu không sao; nhưng bản
-build từ MÁY KHÁC có chữ ký khác nên không cài đè được — phải gỡ app cũ rồi cài lại (mất danh sách máy đã ghép, quét lại
-mã là xong). Muốn cập nhật êm giữa nhiều máy build / CI thì tạo một keystore phát hành riêng.
+build từ MÁY KHÁC có chữ ký khác nên không cài đè được — cập nhật trong app báo "ký bằng khoá khác", phải gỡ app cũ rồi
+cài lại (mất danh sách máy đã ghép, quét lại mã là xong). Muốn cập nhật êm giữa nhiều máy build / CI thì tạo một
+keystore phát hành riêng.
 
 ## Phát triển
 
@@ -312,6 +329,7 @@ lib/
       appearance.dart             lựa chọn giao diện: phong cách + chế độ màu + ngôn ngữ
       mirror.dart                 tab trên máy: thanh tab, dự án, dòng chat
       rtdb_event.dart             sự kiện của luồng Realtime Database
+      app_release.dart            một bản phát hành trên GitHub + so số phiên bản
     services/                   nói chuyện với bên ngoài — mỗi service một provider
       push_service.dart           FCM: quyền, tin tới, đăng ký topic
       remote_service.dart         Realtime Database + mã hoá thẻ / quyết định
@@ -322,7 +340,7 @@ lib/
       pairing_store.dart          lưu máy đã ghép
       appearance_store.dart       lưu lựa chọn giao diện + ngôn ngữ
       prefs_store.dart            lựa chọn lẻ (một khoá một con số)
-      update_service.dart         hỏi GitHub bản phát hành mới nhất + so phiên bản
+      update_service.dart         bản mới: hỏi GitHub, tải + kiểm APK, đưa cho trình cài đặt của máy (AppUpdate.kt)
       link_service.dart           mở link bằng trình duyệt của máy
       biometric_service.dart      vân tay / khuôn mặt / mật mã máy
     pages/
@@ -331,13 +349,14 @@ lib/
       shell/pair_actions.dart     quét / dán mã rồi ghép, dùng chung cho mọi chỗ mở được việc ghép máy
       home/home_vm.dart           ViewModel: HomeState + HomeVm (Notifier) — trạng thái chung của app
       home/home_page.dart         mục Hôm nay (View): vẽ HomeState, chuyển thao tác cho HomeVm
-      home/widgets/               mảnh của mục Hôm nay (thẻ chờ, dòng trạng thái, thẻ lần đầu)
+      home/widgets/               mảnh của mục Hôm nay (thẻ chờ, dòng trạng thái, thẻ lần đầu, dải báo bản mới)
       tabs/tabs_page.dart         mục Tab (+ tabs_vm.dart: thanh tab của các máy)
       tabs/tab_vm.dart            ViewModel hội thoại của một tab (+ tab_page.dart)
       tabs/new_task_vm.dart       ViewModel giao việc mới (+ new_task_page.dart)
       activity/activity_page.dart mục Hoạt động
       settings/settings_page.dart mục Cài đặt (+ widgets/: máy đã ghép, ghim widget, giao diện, bảo mật, bản mới)
       settings/appearance_vm.dart ViewModel lựa chọn giao diện + ngôn ngữ — MaterialApp đọc nó để chọn theme
+      settings/update_vm.dart     ViewModel cập nhật app: tự hỏi, tải, cài — Hôm nay và Cài đặt cùng đọc
       settings/sounds_page.dart, diagnostics_page.dart, guide_page.dart   ba màn con của Cài đặt
       tabs/typing_gate.dart       mở khoá gõ lệnh + thời gian giữ mở khoá
       scan/, setup/

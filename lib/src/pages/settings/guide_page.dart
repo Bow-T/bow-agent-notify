@@ -51,6 +51,14 @@ class GuidePage extends ConsumerWidget {
         ),
       ),
       (
+        icon: 'magic',
+        title: t('Cập nhật app', 'Updating the app'),
+        body: t(
+          'App tự hỏi bản mới mỗi lần mở. Có bản mới thì đầu mục Hôm nay hiện dải báo: bấm Cập nhật, app tải về rồi mở hộp cài đặt của máy — lần đầu Android hỏi cho phép cài từ Bow Notify. Cài xong app tự đóng, mở lại là bản mới. Tắt tự hỏi ở Cài đặt → Về ứng dụng.',
+          'The app checks for a new version each time it opens. When there is one, Today shows a banner: press Update, the app downloads it and opens the system installer — the first time Android asks to allow installs from Bow Notify. The app closes when the install finishes; reopen it for the new version. Turn the automatic check off in Settings → About.',
+        ),
+      ),
+      (
         icon: 'drop',
         title: t('Giao diện', 'Appearance'),
         body: t(

@@ -15,6 +15,7 @@ import 'home_vm.dart';
 import 'widgets/onboarding_card.dart';
 import 'widgets/pending_card_view.dart';
 import 'widgets/status_card.dart';
+import 'widgets/update_banner.dart';
 
 /// Mục "Hôm nay" (View): chỉ thứ đang cần người dùng — thẻ chờ duyệt, câu agent hỏi, và vài thông báo vừa tới. Chưa
 /// ghép máy nào thì là màn hướng dẫn ghép. Nó chỉ vẽ `HomeState` và chuyển thao tác cho `HomeVm`.
@@ -63,6 +64,7 @@ class HomePage extends ConsumerWidget {
       return ListView(
         padding: BowScaffold.listPadding(nav: true),
         children: [
+          const UpdateBanner(),
           OnboardingCard(
             busy: state.busy,
             onScan: () => scanAndPair(context, ref),
@@ -81,6 +83,7 @@ class HomePage extends ConsumerWidget {
     return ListView(
       padding: BowScaffold.listPadding(nav: true),
       children: [
+        const UpdateBanner(),
         StatusStrip(
           hosts: [for (final pairing in state.pairings) pairing.host],
           notListening: state.notListening.length,
