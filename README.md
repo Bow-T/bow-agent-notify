@@ -63,7 +63,28 @@ Thanh điều hướng dưới có bốn mục; thanh trên chỉ có logo và n
 | **Hôm nay** | Thứ đang cần bạn: thẻ chờ duyệt, câu agent hỏi, lời mời trả lời, và vài thông báo vừa tới. Số thẻ đang chờ hiện trên thanh dưới ở mọi mục. Chưa ghép máy nào thì đây là màn hướng dẫn ghép. |
 | **Tab** | Thanh tab của trang bow trên máy (lọc: tất cả / đang chạy / chờ bạn), chạm để đọc hội thoại và gõ tiếp, nút *Giao việc mới*. |
 | **Hoạt động** | Mọi thông báo đã tới từ lúc mở app. |
-| **Cài đặt** | Máy đã ghép (ghép thêm / bỏ ghép), quyền thông báo, widget màn hình chính, giao diện (hai theme), phiên bản, giấy phép. |
+| **Cài đặt** | Máy đã ghép (ghép thêm / bỏ ghép), thông báo + âm báo, bảo mật, widget màn hình chính, giao diện (hai theme, ngôn ngữ), và về ứng dụng (kiểm tra bản mới, chẩn đoán, hướng dẫn, giấy phép) — xem mục dưới. |
+
+### Các mục của Cài đặt
+
+- **Âm báo**: ba loại thông báo, mỗi loại một âm. Android có nút **Nghe thử** — app dựng một thông báo MẪU trên đúng kênh
+  của loại đó (`NotificationService.preview`), nên nghe đúng âm sẽ kêu thật. Tắt / đổi âm từng loại là việc của cài đặt hệ
+  thống (Android khoá âm theo kênh); iPhone không có nút nghe thử vì thông báo do hệ điều hành dựng.
+- **Bảo mật**: cho phép thao tác rủi ro và giao việc mới LUÔN qua vân tay (không có công tắc tắt — dòng này chỉ để
+  người dùng biết). **Giữ mở khoá gõ lệnh** chọn 1 / 5 / 15 phút (`unlockMinutesProvider`, mặc định 5); app ra nền vẫn
+  khoá lại ngay, bất kể mức nào.
+- **Ngôn ngữ** (trong Giao diện): Theo máy / Tiếng Việt / English. `t()` đọc biến `forcedLanguage` do `AppearanceVm` đặt;
+  đổi là cả cây widget dựng lại (chữ tính lúc build). Phần chạy nền tự đọc lựa chọn đã lưu, nên chữ trên thông báo có nút
+  và widget cũng theo.
+- **Kiểm tra bản mới**: CHỈ khi bấm mới hỏi GitHub Releases (`constants/links.dart` → `releasesRepo`); app không tự gọi ra
+  ngoài. Có bản mới thì nút thành **Tải về** — Android mở link APK, iPhone mở trang phát hành. Ai phát hành app ở repo
+  khác thì đổi `releasesRepo`.
+- **Chẩn đoán**: thử lại từng chặng của từng máy đã ghép — đăng ký nhận thông báo, đọc thẻ chờ, trang bow có đang báo về
+  không — và chỉ ra chặng hỏng (`HomeVm.diagnose`). Android có thêm nút dựng một thông báo thử ngay trên máy.
+- **Hướng dẫn**: mỗi việc app làm được một thẻ ngắn, kèm thứ phải bật ở web bow.
+
+*Giờ yên lặng* chưa có: thông báo lúc app đã tắt do hệ điều hành hiện thẳng từ tin của server, app không chặn được —
+muốn có thì phải làm ở phía server (bow-agent quyết định có gửi hay không).
 
 ## Nó hoạt động thế nào
 
@@ -220,6 +241,9 @@ Nó hoạt động thế nào (`lib/src/services/remote_service.dart`, nửa ser
 
 ## Không nhận được thông báo?
 
+Trước hết mở **Cài đặt → Chẩn đoán** trong app: nó thử lại từng chặng và nói chặng nào hỏng. Bảng dưới là cho các trường
+hợp nó không tự chỉ ra được.
+
 | Triệu chứng | Chỗ xem |
 | --- | --- |
 | "Gửi thử" trên web báo lỗi | Dòng lỗi là nguyên văn của Google / FCM: khoá bị thu hồi, sai dự án, API *Firebase Cloud Messaging API (V1)* chưa bật. |
@@ -285,7 +309,7 @@ lib/
       card_ref.dart               thứ gắn theo thông báo, sổ thông báo có nút đang hiện
       widget_snapshot.dart        mọi thứ widget màn hình chính cần để vẽ
       received.dart               thông báo vừa nhận
-      appearance.dart             lựa chọn giao diện: phong cách + chế độ màu
+      appearance.dart             lựa chọn giao diện: phong cách + chế độ màu + ngôn ngữ
       mirror.dart                 tab trên máy: thanh tab, dự án, dòng chat
       rtdb_event.dart             sự kiện của luồng Realtime Database
     services/                   nói chuyện với bên ngoài — mỗi service một provider
@@ -296,7 +320,10 @@ lib/
       home_widget_service.dart    dữ liệu của widget màn hình chính + cú chạm vào nút của nó
       background.dart             các điểm vào chạy nền (thông báo đẩy, nút trên thông báo, nút trên widget)
       pairing_store.dart          lưu máy đã ghép
-      appearance_store.dart       lưu lựa chọn giao diện
+      appearance_store.dart       lưu lựa chọn giao diện + ngôn ngữ
+      prefs_store.dart            lựa chọn lẻ (một khoá một con số)
+      update_service.dart         hỏi GitHub bản phát hành mới nhất + so phiên bản
+      link_service.dart           mở link bằng trình duyệt của máy
       biometric_service.dart      vân tay / khuôn mặt / mật mã máy
     pages/
       shell/shell_page.dart       khung app: thanh trên, bốn mục ở thanh dưới, vòng đời app
@@ -309,8 +336,10 @@ lib/
       tabs/tab_vm.dart            ViewModel hội thoại của một tab (+ tab_page.dart)
       tabs/new_task_vm.dart       ViewModel giao việc mới (+ new_task_page.dart)
       activity/activity_page.dart mục Hoạt động
-      settings/settings_page.dart mục Cài đặt (+ widgets/: dòng máy đã ghép, mời ghim widget, chọn giao diện)
-      settings/appearance_vm.dart ViewModel lựa chọn giao diện — MaterialApp đọc nó để chọn theme
+      settings/settings_page.dart mục Cài đặt (+ widgets/: máy đã ghép, ghim widget, giao diện, bảo mật, bản mới)
+      settings/appearance_vm.dart ViewModel lựa chọn giao diện + ngôn ngữ — MaterialApp đọc nó để chọn theme
+      settings/sounds_page.dart, diagnostics_page.dart, guide_page.dart   ba màn con của Cài đặt
+      tabs/typing_gate.dart       mở khoá gõ lệnh + thời gian giữ mở khoá
       scan/, setup/
     components/                 widget dùng chung (kính, nút, icon 3D, hộp thoại, thanh điều hướng dưới…)
     themes/, constants/

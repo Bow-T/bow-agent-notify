@@ -11,7 +11,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /** Hình app dùng — tên theo `ART` của icons3d.ts. */
-const NAMES = ['agent', 'bell', 'shield', 'chat', 'success', 'error', 'bolt', 'warning', 'trash', 'camera', 'qr', 'layers', 'activity', 'gear', 'info', 'drop', 'brick', 'lamp'];
+const NAMES = ['agent', 'bell', 'shield', 'chat', 'success', 'error', 'bolt', 'warning', 'trash', 'camera', 'qr', 'layers', 'activity', 'gear', 'info', 'drop', 'brick', 'lamp', 'lock', 'hourglass', 'bug', 'book', 'magic', 'globe'];
 
 const source = process.argv[2];
 if (!source) throw new Error('Thiếu đường dẫn tới web/icons3d.ts của bow-agent.');

@@ -29,9 +29,13 @@ class BowNotifyApp extends ConsumerWidget {
         GlassMode.light => ThemeMode.light,
         GlassMode.dark => ThemeMode.dark,
       },
-      home: firebaseError == null
-          ? const ShellPage()
-          : SetupNeededPage(error: firebaseError!),
+      // Chữ của app tính lúc dựng widget (`t()`), nhiều màn lại là const ⇒ đổi ngôn ngữ thì dựng lại cả cây.
+      home: KeyedSubtree(
+        key: ValueKey(appearance.language),
+        child: firebaseError == null
+            ? const ShellPage()
+            : SetupNeededPage(error: firebaseError!),
+      ),
     );
   }
 }

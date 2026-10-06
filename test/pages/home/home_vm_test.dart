@@ -119,6 +119,14 @@ class FakeNotifications implements NotificationService {
   final dismissed = <Set<String>>[];
   final shown = <RemoteMessage>[];
 
+  /// Kênh của các lần "nghe thử".
+  final previews = <String>[];
+  @override
+  bool canPreview = true;
+  @override
+  Future<void> preview(String channel, {required String title}) async =>
+      previews.add(channel);
+
   @override
   Future<void> dismissHandledCards(Set<String> live, DateTime asOf) async =>
       dismissed.add(live);
@@ -539,4 +547,36 @@ void main() {
       expect(h.widget.pinned, [false, true]);
     },
   );
+
+  test('chẩn đoán: báo từng chặng của từng máy và cập nhật dấu chưa đăng ký '
+      'được', () async {
+    final a = _pairing('a');
+    final b = _pairing('b', key: false);
+    final h = await _start(saved: [a, b]);
+    var checks = await h.vm.diagnose();
+    expect(
+      [for (final c in checks) (c.subscribed, c.database)],
+      [
+        (true, true),
+        (true, null),
+      ], // b chỉ gửi thông báo: không có database để đọc
+    );
+    expect(h.container.read(homeVmProvider).notListening, isEmpty);
+
+    h.push.offline = true;
+    h.remote.down.add(a.topic);
+    checks = await h.vm.diagnose();
+    expect(
+      [for (final c in checks) (c.subscribed, c.database)],
+      [(false, false), (false, null)],
+    );
+    expect(checks.first.error, contains('mất mạng'));
+    expect(h.container.read(homeVmProvider).notListening, {a.topic, b.topic});
+
+    // Mạng về: thử lại là hết dấu đỏ.
+    h.push.offline = false;
+    h.remote.down.clear();
+    await h.vm.diagnose();
+    expect(h.container.read(homeVmProvider).notListening, isEmpty);
+  });
 }

@@ -217,6 +217,26 @@ class NotificationService {
     );
   }
 
+  /// Máy này nghe thử được âm của từng loại thông báo (Android: âm gắn theo kênh, app tự dựng được thông báo mẫu).
+  bool get canPreview => _android;
+
+  /// Nghe thử âm của một loại thông báo: hiện một thông báo MẪU trên đúng kênh đó ([channel] = `bow_ask` /
+  /// `bow_done` / `bow_fail`). Cùng một tag nên bấm nhiều lần chỉ có một thông báo mẫu, và lần nào cũng kêu.
+  Future<void> preview(String channel, {required String title}) async {
+    if (!_android || !_channels.containsKey(channel)) return;
+    await _plugin.show(
+      id: 0,
+      title: title,
+      body: t(
+        'Thông báo mẫu — âm của loại này nghe như vậy.',
+        'Sample notification — this is how this kind sounds.',
+      ),
+      notificationDetails: NotificationDetails(
+        android: _details(channel, tag: 'bow-preview-$channel'),
+      ),
+    );
+  }
+
   /// Người dùng bấm vào thông báo hoặc một nút của nó. Trả mã thẻ VỪA TRẢ LỜI (để nơi khác — widget màn hình chính —
   /// ẩn nó ngay, không chờ máy chạy bow gỡ); `null` = không gửi quyết định nào.
   Future<String?> handleResponse(NotificationResponse response) async {
