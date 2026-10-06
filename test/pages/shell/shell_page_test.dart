@@ -2,6 +2,7 @@ import 'package:bow_notify/src/models/mirror.dart';
 import 'package:bow_notify/src/models/pairing.dart';
 import 'package:bow_notify/src/models/pending_card.dart';
 import 'package:bow_notify/app/app.dart';
+import 'package:bow_notify/src/components/bottom_nav.dart';
 import 'package:bow_notify/src/constants/links.dart';
 import 'package:bow_notify/src/constants/version.dart';
 import 'package:bow_notify/src/models/appearance.dart';
@@ -32,6 +33,7 @@ import '../home/home_vm_test.dart'
         FakeStore,
         FakeWidget;
 import '../settings/appearance_vm_test.dart' show FakeAppearanceStore;
+import '../settings/update_vm_test.dart' show FakeLinks, FakeUpdates, release;
 import '../tabs/tabs_vm_test.dart' show FakeMirror;
 import '../tabs/unlock_minutes_test.dart' show FakePrefs;
 
@@ -51,25 +53,6 @@ PendingCard _card(Pairing pairing, String id) =>
       'at': 1,
     })!;
 
-class FakeUpdates implements UpdateService {
-  /// Bản mới nhất GitHub sẽ trả; `null` = mất mạng.
-  String? latest = appVersion;
-
-  @override
-  Future<String> latestVersion() async =>
-      latest ?? (throw Exception('mất mạng'));
-}
-
-class FakeLinks implements LinkService {
-  final opened = <String>[];
-
-  @override
-  Future<bool> open(String url) async {
-    opened.add(url);
-    return true;
-  }
-}
-
 typedef Harness = ({
   FakeRemote remote,
   FakeMirror mirror,
@@ -86,6 +69,7 @@ Future<Harness> _pump(
   Map<String, List<PendingCard>> cards = const {},
   Map<String, List<String>> ports = const {},
   FakeAppearanceStore? appearance,
+  FakeUpdates? updates,
 }) async {
   final remote = FakeRemote()..cards.addAll(cards);
   // Cổng đang có bản sao tab phải khai TRƯỚC khi app mở: ViewModel dò máy ngay lúc khởi động.
@@ -93,7 +77,8 @@ Future<Harness> _pump(
   final push = FakePush();
   final notifications = FakeNotifications();
   final prefs = FakePrefs();
-  final updates = FakeUpdates();
+  // Bản mới nhất GitHub trả phải khai TRƯỚC khi app mở: khung app tự hỏi ngay sau khung hình đầu.
+  updates ??= FakeUpdates();
   final links = FakeLinks();
   // Ngôn ngữ ép là biến toàn cục — không để bài này làm đổi chữ của bài sau.
   addTearDown(() => forcedLanguage = null);
@@ -139,9 +124,14 @@ Future<Harness> _pump(
 /// Bộ token đang áp cho màn hình (đọc từ theme của khung).
 Bow _bow(WidgetTester tester) => Bow.of(tester.element(find.byType(ShellPage)));
 
+/// Cuộn danh sách của mục đang mở tới khi thấy [finder]. Chỉ rõ danh sách NGOÀI CÙNG: ghi chú "có gì mới" (chữ
+/// chọn + chép được) cũng là một vùng cuộn, để mặc định thì bộ thử không biết cuộn cái nào.
+Future<void> _scrollTo(WidgetTester tester, Finder finder) => tester
+    .scrollUntilVisible(finder, 200, scrollable: find.byType(Scrollable).first);
+
 /// Bấm một ô của Cài đặt → Giao diện rồi chờ hoạt ảnh đổi theme xong.
 Future<void> _pick(WidgetTester tester, String label) async {
-  await tester.scrollUntilVisible(find.text(label), 200);
+  await _scrollTo(tester, find.text(label));
   // "Thấy" chưa đủ: ô có thể còn nằm dưới thanh điều hướng nổi — kéo nó lên đầu danh sách rồi mới bấm.
   await tester.ensureVisible(find.text(label));
   await tester.pump();
@@ -216,23 +206,110 @@ void main() {
     expect(find.text('Play'), findsNothing);
   });
 
-  testWidgets('Kiểm tra bản mới: đang mới nhất / có bản mới thì nút thành Tải '
-      'về và mở link APK / mất mạng', (tester) async {
-    final h = await _pump(tester, saved: [_pairing('a')]);
+  testWidgets('Bản mới (iPhone — không cài được APK): mở app là tự hỏi; bấm '
+      'Kiểm tra: mất mạng / có bản mới thì nút thành Tải về và mở trang phát '
+      'hành', (tester) async {
+    final updates = FakeUpdates()..canInstall = false;
+    final h = await _pump(tester, saved: [_pairing('a')], updates: updates);
+    expect(updates.asked, 1); // tự hỏi lúc mở app
     await _openSettings(tester);
-    await _pick(tester, 'Check');
+    await _scrollTo(tester, find.text('Check'));
     expect(find.textContaining('this is the latest'), findsOneWidget);
     expect(find.text('Download'), findsNothing);
 
-    h.updates.latest = null;
+    updates.latestRelease = null;
     await _pick(tester, 'Check');
     expect(find.textContaining('could not check'), findsOneWidget);
 
-    h.updates.latest = '99.0.0';
+    updates.latestRelease = release('99.0.0');
     await _pick(tester, 'Check');
     expect(find.textContaining('version 99.0.0 is available'), findsOneWidget);
+    expect(find.text('What is new in 99.0.0'), findsOneWidget);
     await _pick(tester, 'Download');
+    expect(h.links.opened, [releasesPageUrl]);
+    expect(updates.downloads, isEmpty);
+  });
+
+  testWidgets('Bản mới (Android): mở app là thấy dải báo ở Hôm nay + chấm ở '
+      'Cài đặt; bấm Cập nhật là tải rồi mở trình cài đặt, huỷ thì còn nút Cài', (
+    tester,
+  ) async {
+    final updates = FakeUpdates()..latestRelease = release('99.0.0');
+    await _pump(tester, saved: [_pairing('a')], updates: updates);
+    await tester.pump();
+    expect(find.text('Bow Notify 99.0.0'), findsOneWidget);
+    expect(find.text('version 99.0.0 is available'), findsOneWidget);
+    // Chấm đỏ ở mục Cài đặt của thanh dưới.
+    expect(
+      find.descendant(of: find.byType(BowBottomNav), matching: find.text('1')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Update'));
+    await tester.pump();
+    await tester.pump();
+    expect(updates.downloads, ['99.0.0']);
+    expect(updates.installs, ['/tmp/bow-notify-99.0.0.apk']);
+    // Trình cài đặt giả trả "huỷ": dải báo còn đó với nút cài lại, không tải lại.
+    expect(find.text('Update'), findsNothing);
+    await tester.tap(find.text('Install'));
+    await tester.pump();
+    expect(updates.downloads, ['99.0.0']);
+    expect(updates.installs, hasLength(2));
+
+    // Cùng trạng thái đó hiện ở Cài đặt → Về ứng dụng.
+    await _openSettings(tester);
+    await _scrollTo(tester, find.text('What is new in 99.0.0'));
+    expect(find.textContaining('99.0.0 downloaded'), findsOneWidget);
+  });
+
+  testWidgets('Bản mới: gạt dải báo ở Hôm nay ("Để sau") thì dải biến mất, '
+      'chấm ở Cài đặt và nút Cập nhật ở đó vẫn còn', (tester) async {
+    final updates = FakeUpdates()..latestRelease = release('99.0.0');
+    await _pump(tester, saved: [_pairing('a')], updates: updates);
+    await tester.pump();
+    await tester.tap(find.byTooltip('Later'));
+    await tester.pump();
+    expect(find.text('Bow Notify 99.0.0'), findsNothing);
+    expect(
+      find.descendant(of: find.byType(BowBottomNav), matching: find.text('1')),
+      findsOneWidget,
+    );
+    await _openSettings(tester);
+    await _scrollTo(tester, find.text('Update'));
+    expect(find.textContaining('version 99.0.0 is available'), findsOneWidget);
+  });
+
+  testWidgets('Bản mới: chưa ghép máy nào cũng thấy dải báo; cài hỏng vì '
+      'khác khoá thì nói rõ và mời tải bằng trình duyệt', (tester) async {
+    final updates = FakeUpdates()
+      ..latestRelease = release('99.0.0')
+      ..installResult = InstallResult.conflict;
+    final h = await _pump(tester, updates: updates);
+    await tester.pump();
+    expect(find.text('Bow Notify 99.0.0'), findsOneWidget);
+    await tester.tap(find.text('Update'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('signed with a different key'), findsOneWidget);
+
+    await _openSettings(tester);
+    await _pick(tester, 'Download in the browser ›');
     expect(h.links.opened, [latestApkUrl]);
+  });
+
+  testWidgets('Bản mới: chọn "chỉ khi bấm" là lưu lại; không có bản mới thì '
+      'không có dải báo, không có chấm', (tester) async {
+    final h = await _pump(tester, saved: [_pairing('a')]);
+    await tester.pump();
+    expect(find.textContaining('Bow Notify $appVersion'), findsNothing);
+    expect(
+      find.descendant(of: find.byType(BowBottomNav), matching: find.text('1')),
+      findsNothing,
+    );
+    await _openSettings(tester);
+    await _pick(tester, 'Only when I press');
+    expect(h.prefs.ints, {'update_auto': 0});
   });
 
   testWidgets('Chẩn đoán: mở ra là thử từng chặng của từng máy; chặng hỏng '

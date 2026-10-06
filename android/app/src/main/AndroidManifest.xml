@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Xác thực vân tay / khuôn mặt trước khi cho phép một thao tác rủi ro từ điện thoại. -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- Cập nhật trong app: đưa APK bản mới (tải từ GitHub Releases) cho trình cài đặt của máy. Quyền này chỉ cho
+         app MỞ hộp cài đặt — Android vẫn hỏi người dùng từng lần, và lần đầu còn phải bật "cho phép từ nguồn này". -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application
         android:label="Bow Notify"
         android:name="${applicationName}"
@@ -38,6 +41,11 @@
              về Dart (notifications.dart) — kể cả khi app đã tắt. -->
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
+            android:exported="false" />
+        <!-- Kết quả của trình cài đặt khi cập nhật app (AppUpdate.kt). KHÔNG exported: app khác không giả được
+             "cần xác nhận" để bắt app này mở một màn hình tuỳ ý. -->
+        <receiver
+            android:name=".InstallStatusReceiver"
             android:exported="false" />
         <!-- Widget màn hình chính (BowWidgets.kt). -->
         <receiver

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
 import 'src/pages/settings/appearance_vm.dart';
+import 'src/pages/settings/update_vm.dart';
 import 'src/pages/tabs/typing_gate.dart';
 import 'src/services/background.dart';
 import 'src/services/home_widget_service.dart';
@@ -39,6 +40,7 @@ Future<void> main() async {
   // Theme người dùng đã chọn: nạp trước khung hình đầu tiên (không phụ thuộc Firebase).
   await container.read(appearanceVmProvider.notifier).load();
   await container.read(unlockMinutesProvider.notifier).load();
+  await container.read(updateVmProvider.notifier).load();
   String? firebaseError;
   try {
     // Không truyền options: đọc cấu hình native do `flutterfire configure` đặt (google-services.json /
